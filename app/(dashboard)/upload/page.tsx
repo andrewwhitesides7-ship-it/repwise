@@ -8,22 +8,22 @@ import { syncCRM } from "@/app/actions/sync-crm";
 
 type Provider = "hubspot" | "salesforce" | "pipedrive";
 
-const crmConfig = {
-  hubspot: { name: "HubSpot", logo: "??", description: "Contacts, deals, and pipeline activity", connectUrl: "/api/auth/hubspot" },
-  salesforce: { name: "Salesforce", logo: "??", description: "Opportunities, accounts, and activities", connectUrl: "/api/auth/salesforce" },
-  pipedrive: { name: "Pipedrive", logo: "??", description: "Deals, contacts, and rep activity", connectUrl: "/api/auth/pipedrive" },
+const crmConfig: Record<Provider, { name: string; logo: string; description: string; connectUrl: string }> = {
+  hubspot: { name: "HubSpot", logo: "🟠", description: "Contacts, deals, and pipeline activity", connectUrl: "/api/auth/hubspot" },
+  salesforce: { name: "Salesforce", logo: "☁️", description: "Opportunities, accounts, and activities", connectUrl: "/api/auth/salesforce" },
+  pipedrive: { name: "Pipedrive", logo: "🟢", description: "Deals, contacts, and rep activity", connectUrl: "/api/auth/pipedrive" },
 };
 
 function UploadPageInner() {
   const searchParams = useSearchParams();
-  const [file, setFile] = useState(null);
+  const [file, setFile] = useState<File | null>(null);
   const [dragging, setDragging] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [stage, setStage] = useState("");
-  const [connections, setConnections] = useState({});
-  const [syncing, setSyncing] = useState(null);
-  const inputRef = useRef(null);
+  const [connections, setConnections] = useState<Record<string, boolean>>({});
+  const [syncing, setSyncing] = useState<Provider | null>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     loadConnections();
@@ -35,13 +35,13 @@ function UploadPageInner() {
     const supabase = createClient();
     const { data } = await supabase.from("crm_connections").select("provider");
     if (data) {
-      const map = {};
-      data.forEach(c => { map[c.provider] = true; });
+      const map: Record<string, boolean> = {};
+      data.forEach((c) => { map[c.provider] = true; });
       setConnections(map);
     }
   }
 
-  const handleDrop = useCallback((e) => {
+  const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     setDragging(false);
     const dropped = e.dataTransfer.files[0];
@@ -49,7 +49,7 @@ function UploadPageInner() {
     else setError("Only .csv files are accepted.");
   }, []);
 
-  const handleFileChange = (e) => {
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selected = e.target.files?.[0];
     if (selected && selected.name.endsWith(".csv")) { setFile(selected); setError(""); }
     else setError("Only .csv files are accepted.");
@@ -64,13 +64,17 @@ function UploadPageInner() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
       setStage("Saving upload record...");
-      const { data: upload, error: dbError } = await supabase.from("uploads").insert({ user_id: user.id, file_name: file.name, file_path: null, status: "pending" }).select().single();
+      const { data: upload, error: dbError } = await supabase
+        .from("uploads")
+        .insert({ user_id: user.id, file_name: file.name, file_path: null, status: "pending" })
+        .select()
+        .single();
       if (dbError || !upload) throw new Error(dbError?.message || "Failed to create upload record");
       setStage("Reading CSV data...");
       const fileContent = await file.text();
       setStage("AI is analyzing your sales data...");
       await analyzeUpload(upload.id, fileContent);
-    } catch (err) {
+    } catch (err: unknown) {
       if (err instanceof Error && err.message.includes("NEXT_REDIRECT")) return;
       setError(err instanceof Error ? err.message : "Something went wrong.");
       setLoading(false);
@@ -78,12 +82,12 @@ function UploadPageInner() {
     }
   }
 
-  async function handleSync(provider) {
+  async function handleSync(provider: Provider) {
     setSyncing(provider);
     setError("");
     try {
       await syncCRM(provider);
-    } catch (err) {
+    } catch (err: unknown) {
       if (err instanceof Error && err.message.includes("NEXT_REDIRECT")) return;
       setError(err instanceof Error ? err.message : "Sync failed.");
       setSyncing(null);
@@ -99,7 +103,7 @@ function UploadPageInner() {
 
       <div className="bg-gray-900 border border-gray-800 rounded-2xl p-6 mb-6">
         <div className="flex items-center gap-3 mb-5">
-          <div className="w-8 h-8 bg-blue-500/10 rounded-lg flex items-center justify-center text-sm">??</div>
+          <div className="w-8 h-8 bg-blue-500/10 rounded-lg flex items-center justify-center text-sm">📄</div>
           <div>
             <h2 className="text-white font-semibold">Upload CSV</h2>
             <p className="text-gray-500 text-xs">Export from any CRM or spreadsheet and upload here</p>
@@ -107,22 +111,36 @@ function UploadPageInner() {
         </div>
         {!loading ? (
           <>
-            <div onDragOver={(e) => { e.preventDefault(); setDragging(true); }} onDragLeave={() => setDragging(false)} onDrop={handleDrop} onClick={() => inputRef.current?.click()} className={`border-2 border-dashed rounded-xl p-10 text-center cursor-pointer transition-all duration-200 ${dragging ? "border-blue-500 bg-blue-500/5" : file ? "border-green-500/50 bg-green-500/5" : "border-gray-700 hover:border-gray-600 hover:bg-gray-800/30"}`}>
+            <div
+              onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
+              onDragLeave={() => setDragging(false)}
+              onDrop={handleDrop}
+              onClick={() => inputRef.current?.click()}
+              className={`border-2 border-dashed rounded-xl p-10 text-center cursor-pointer transition-all duration-200 ${
+                dragging ? "border-blue-500 bg-blue-500/5" :
+                file ? "border-green-500/50 bg-green-500/5" :
+                "border-gray-700 hover:border-gray-600 hover:bg-gray-800/30"
+              }`}
+            >
               <input ref={inputRef} type="file" accept=".csv" onChange={handleFileChange} className="hidden" />
               {file ? (
                 <div className="flex flex-col items-center gap-3">
                   <div className="w-12 h-12 bg-green-500/10 rounded-xl flex items-center justify-center">
-                    <svg className="w-6 h-6 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                    <svg className="w-6 h-6 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
                   </div>
                   <div>
                     <p className="text-white font-medium text-sm">{file.name}</p>
-                    <p className="text-gray-500 text-xs mt-0.5">{(file.size / 1024).toFixed(1)} KB � Click to change</p>
+                    <p className="text-gray-500 text-xs mt-0.5">{(file.size / 1024).toFixed(1)} KB</p>
                   </div>
                 </div>
               ) : (
                 <div className="flex flex-col items-center gap-3">
                   <div className="w-12 h-12 bg-gray-800 rounded-xl flex items-center justify-center">
-                    <svg className="w-6 h-6 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" /></svg>
+                    <svg className="w-6 h-6 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
+                    </svg>
                   </div>
                   <div>
                     <p className="text-white font-medium text-sm">Drop your CSV here</p>
@@ -132,9 +150,13 @@ function UploadPageInner() {
                 </div>
               )}
             </div>
-            {error && <div className="mt-3 bg-red-500/10 border border-red-500/30 rounded-lg px-4 py-3"><p className="text-red-400 text-sm">{error}</p></div>}
+            {error && (
+              <div className="mt-3 bg-red-500/10 border border-red-500/30 rounded-lg px-4 py-3">
+                <p className="text-red-400 text-sm">{error}</p>
+              </div>
+            )}
             {file && (
-              <button onClick={handleSubmit} className="mt-4 w-full bg-blue-600 hover:bg-blue-500 text-white font-semibold rounded-xl px-4 py-3 text-sm transition flex items-center justify-center gap-2">
+              <button onClick={handleSubmit} className="mt-4 w-full bg-blue-600 hover:bg-blue-500 text-white font-semibold rounded-xl px-4 py-3 text-sm transition">
                 Analyze with AI
               </button>
             )}
@@ -154,17 +176,15 @@ function UploadPageInner() {
       </div>
 
       <div className="bg-gray-900 border border-gray-800 rounded-2xl p-6">
-        <div className="flex items-center justify-between mb-5">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 bg-purple-500/10 rounded-lg flex items-center justify-center text-sm">??</div>
-            <div>
-              <h2 className="text-white font-semibold">CRM Integrations</h2>
-              <p className="text-gray-500 text-xs">Connect your CRM for one-click data syncing</p>
-            </div>
+        <div className="flex items-center gap-3 mb-5">
+          <div className="w-8 h-8 bg-purple-500/10 rounded-lg flex items-center justify-center text-sm">🔌</div>
+          <div>
+            <h2 className="text-white font-semibold">CRM Integrations</h2>
+            <p className="text-gray-500 text-xs">Connect your CRM for one-click data syncing</p>
           </div>
         </div>
         <div className="space-y-3">
-          {Object.keys(crmConfig).map((provider) => {
+          {(Object.keys(crmConfig) as Provider[]).map((provider) => {
             const crm = crmConfig[provider];
             const isConnected = connections[provider];
             const isSyncing = syncing === provider;
@@ -175,14 +195,19 @@ function UploadPageInner() {
                   <div>
                     <div className="flex items-center gap-2">
                       <span className="text-white text-sm font-medium">{crm.name}</span>
-                      {isConnected && <span className="flex items-center gap-1 text-xs text-green-400 bg-green-500/10 border border-green-500/20 px-2 py-0.5 rounded-full"><span className="w-1.5 h-1.5 bg-green-400 rounded-full" />Connected</span>}
+                      {isConnected && (
+                        <span className="flex items-center gap-1 text-xs text-green-400 bg-green-500/10 border border-green-500/20 px-2 py-0.5 rounded-full">
+                          <span className="w-1.5 h-1.5 bg-green-400 rounded-full" />
+                          Connected
+                        </span>
+                      )}
                     </div>
                     <div className="text-gray-500 text-xs">{crm.description}</div>
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
                   {isConnected ? (
-                    <button onClick={() => handleSync(provider)} disabled={!!syncing} className="flex items-center gap-1.5 text-xs text-blue-400 bg-blue-500/10 border border-blue-500/20 hover:bg-blue-500/20 disabled:opacity-50 px-3 py-1.5 rounded-lg transition font-medium">
+                    <button onClick={() => handleSync(provider)} disabled={!!syncing} className="text-xs text-blue-400 bg-blue-500/10 border border-blue-500/20 hover:bg-blue-500/20 disabled:opacity-50 px-3 py-1.5 rounded-lg transition font-medium">
                       {isSyncing ? "Syncing..." : "Sync Now"}
                     </button>
                   ) : (
