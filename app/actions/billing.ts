@@ -4,9 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import Stripe from "stripe";
 import { redirect } from "next/navigation";
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: "2024-06-20",
-});
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
 
 export async function createCheckoutSession(plan: "solo" | "team") {
   const supabase = createClient();
