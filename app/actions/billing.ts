@@ -4,9 +4,12 @@ import { createClient } from "@/lib/supabase/server";
 import Stripe from "stripe";
 import { redirect } from "next/navigation";
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
+const stripe = process.env.STRIPE_SECRET_KEY
+  ? new Stripe(process.env.STRIPE_SECRET_KEY)
+  : null;
 
 export async function createCheckoutSession(plan: "solo" | "team") {
+  if (!stripe) throw new Error("Stripe not configured");
   const supabase = createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error("Not authenticated");
@@ -25,15 +28,10 @@ export async function createCheckoutSession(plan: "solo" | "team") {
       metadata: { supabase_user_id: user.id },
     });
     customerId = customer.id;
-    await supabase
-      .from("users")
-      .update({ stripe_customer_id: customerId })
-      .eq("id", user.id);
+    await supabase.from("users").update({ stripe_customer_id: customerId }).eq("id", user.id);
   }
 
-  const priceId = plan === "solo"
-    ? process.env.STRIPE_SOLO_PRICE_ID!
-    : process.env.STRIPE_TEAM_PRICE_ID!;
+  const priceId = plan === "solo" ? process.env.STRIPE_SOLO_PRICE_ID! : process.env.STRIPE_TEAM_PRICE_ID!;
 
   const session = await stripe.checkout.sessions.create({
     customer: customerId,
@@ -41,16 +39,14 @@ export async function createCheckoutSession(plan: "solo" | "team") {
     line_items: [{ price: priceId, quantity: 1 }],
     success_url: `${process.env.NEXT_PUBLIC_APP_URL}/dashboard?upgraded=true`,
     cancel_url: `${process.env.NEXT_PUBLIC_APP_URL}/billing?canceled=true`,
-    metadata: {
-      supabase_user_id: user.id,
-      plan,
-    },
+    metadata: { supabase_user_id: user.id, plan },
   });
 
   redirect(session.url!);
 }
 
 export async function createPortalSession() {
+  if (!stripe) throw new Error("Stripe not configured");
   const supabase = createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error("Not authenticated");
