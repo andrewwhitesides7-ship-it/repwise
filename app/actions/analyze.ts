@@ -209,7 +209,11 @@ export async function analyzeUpload(uploadId: string, fileContent: string) {
     } catch {
       throw new Error("Failed to parse AI response as JSON");
     }
-
+await supabase
+  .from("insights")
+  .update({ is_dismissed: true })
+  .eq("user_id", user.id)
+  .neq("upload_id", uploadId);
     const insightRows = insights.map(insight => ({
       upload_id: uploadId,
       user_id: user.id,

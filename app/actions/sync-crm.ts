@@ -80,7 +80,9 @@ export async function syncCRM(provider: string) {
     const stage = d.properties?.dealstage || "unknown";
     stageMap[stage] = (stageMap[stage] || 0) + 1;
   });
-  const stageSummary = Object.entries(stageMap).map(([stage, count]) => `${stage}: ${count} deals`).join("\n");
+  const stageSummary = Object.entries(stageMap)
+    .map(([stage, count]) => `${stage}: ${count} deals`)
+    .join("\n");
 
   const summary = `
 HUBSPOT CRM DATA SUMMARY
@@ -97,15 +99,29 @@ ${stageSummary}
 
   const { data: upload } = await supabase
     .from("uploads")
-    .insert({ user_id: user.id, file_name: `HubSpot Sync - ${new Date().toLocaleDateString()}`, status: "processing" })
+    .insert({
+      user_id: user.id,
+      file_name: `HubSpot Sync - ${new Date().toLocaleDateString()}`,
+      status: "processing",
+    })
     .select()
     .single();
+
+  // Archive all previous insights before generating new ones
+  await supabase
+    .from("insights")
+    .update({ is_dismissed: true })
+    .eq("user_id", user.id)
+    .eq("is_dismissed", false);
 
   const message = await anthropic.messages.create({
     model: "claude-sonnet-4-5",
     max_tokens: 3000,
-    system: `You are RepWise, an AI sales intelligence engine. Analyze this CRM data and generate 8-10 specific, actionable insights. Return ONLY a JSON array. Each insight: { priority: "critical"|"opportunity"|"pattern", category: string, title: string (under 10 words), body: string (2-3 sentences with specific numbers), metric: string }. No preamble, no markdown, just raw JSON.`,
-    messages: [{ role: "user", content: `Analyze this HubSpot CRM data:\n\n${summary}` }],
+    system: `You are RepWise, an AI sales intelligence engine. Analyze this CRM data and generate 8-10 specific, actionable insights. Return ONLY a JSON array with exactly 8-10 items. Each insight object: { priority: "critical"|"opportunity"|"pattern", category: string, title: string (under 10 words, action-oriented), body: string (2-3 sentences with specific numbers from the data), metric: string (key number or stat) }. No preamble, no markdown, just raw JSON array.`,
+    messages: [{
+      role: "user",
+      content: `Analyze this HubSpot CRM data and generate exactly 8-10 insights:\n\n${summary}`,
+    }],
   });
 
   const raw = message.content[0].type === "text" ? message.content[0].text : "[]";
@@ -113,8 +129,12 @@ ${stageSummary}
   const insights = JSON.parse(cleaned);
 
   if (upload) {
-    await supabase.from("uploads").update({ status: "complete" }).eq("id", upload.id);
-    for (const insight of insights) {
+    await supabase
+      .from("uploads")
+      .update({ status: "complete" })
+      .eq("id", upload.id);
+
+    for (const insight of insights.slice(0, 10)) {
       await supabase.from("insights").insert({
         user_id: user.id,
         upload_id: upload.id,
