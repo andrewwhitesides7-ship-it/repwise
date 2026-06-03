@@ -43,8 +43,8 @@ export async function createCheckoutSession(plan: PlanId) {
     customer: customerId,
     mode: "subscription",
     line_items: [{ price: priceIds[plan], quantity: 1 }],
-    success_url: `${process.env.NEXT_PUBLIC_APP_URL}/dashboard?upgraded=true`,
-    cancel_url: `${process.env.NEXT_PUBLIC_APP_URL}/billing?canceled=true`,
+    success_url: `https://tryrepwise.com/dashboard?upgraded=true`,
+cancel_url: `https://tryrepwise.com/billing?canceled=true`,
     allow_promotion_codes: true,
     subscription_data: {
       trial_period_days: 14,
@@ -76,3 +76,5 @@ export async function createPortalSession() {
 
   redirect(session.url);
 }
+
+s
