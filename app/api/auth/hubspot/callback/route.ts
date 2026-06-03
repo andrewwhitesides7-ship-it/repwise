@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { cookies } from "next/headers";
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -12,14 +11,20 @@ export async function GET(request: Request) {
     return NextResponse.redirect(`${process.env.NEXT_PUBLIC_APP_URL}/upload?error=hubspot_denied`);
   }
 
-  if (!code) {
+  if (!code || !state) {
     return NextResponse.redirect(`${process.env.NEXT_PUBLIC_APP_URL}/upload?error=hubspot_no_code`);
   }
 
-  const cookieStore = cookies();
-  const codeVerifier = cookieStore.get("hubspot_code_verifier")?.value;
+  const supabase = createClient();
 
-  if (!codeVerifier) {
+  const { data: connection } = await supabase
+    .from("crm_connections")
+    .select("code_verifier")
+    .eq("user_id", state)
+    .eq("provider", "hubspot")
+    .single();
+
+  if (!connection?.code_verifier) {
     return NextResponse.redirect(`${process.env.NEXT_PUBLIC_APP_URL}/upload?error=hubspot_no_verifier`);
   }
 
@@ -33,7 +38,7 @@ export async function GET(request: Request) {
         client_secret: process.env.HUBSPOT_CLIENT_SECRET!,
         redirect_uri: `${process.env.NEXT_PUBLIC_APP_URL}/api/auth/hubspot/callback`,
         code,
-        code_verifier: codeVerifier,
+        code_verifier: connection.code_verifier,
       }),
     });
 
@@ -44,20 +49,14 @@ export async function GET(request: Request) {
       return NextResponse.redirect(`${process.env.NEXT_PUBLIC_APP_URL}/upload?error=hubspot_token_failed`);
     }
 
-    const supabase = createClient();
-    const userId = state;
-
-    await supabase.from("crm_connections").upsert({
-      user_id: userId,
-      provider: "hubspot",
+    await supabase.from("crm_connections").update({
       access_token: tokens.access_token,
       refresh_token: tokens.refresh_token,
       expires_at: new Date(Date.now() + tokens.expires_in * 1000).toISOString(),
-    });
+      code_verifier: null,
+    }).eq("user_id", state).eq("provider", "hubspot");
 
-    const response = NextResponse.redirect(`${process.env.NEXT_PUBLIC_APP_URL}/upload?connected=hubspot`);
-    response.cookies.delete("hubspot_code_verifier");
-    return response;
+    return NextResponse.redirect(`${process.env.NEXT_PUBLIC_APP_URL}/upload?connected=hubspot`);
 
   } catch (err) {
     console.error("HubSpot callback error:", err);

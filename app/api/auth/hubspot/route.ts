@@ -18,6 +18,13 @@ export async function GET() {
   const codeVerifier = base64URLEncode(crypto.randomBytes(32));
   const codeChallenge = base64URLEncode(Buffer.from(sha256(codeVerifier)));
 
+  await supabase.from("crm_connections").upsert({
+    user_id: user.id,
+    provider: "hubspot",
+    access_token: "pending",
+    code_verifier: codeVerifier,
+  });
+
   const url = new URL("https://mcp-na2.hubspot.com/oauth/authorize/user");
   url.searchParams.set("client_id", process.env.HUBSPOT_CLIENT_ID!);
   url.searchParams.set("redirect_uri", `${process.env.NEXT_PUBLIC_APP_URL}/api/auth/hubspot/callback`);
@@ -25,13 +32,5 @@ export async function GET() {
   url.searchParams.set("code_challenge_method", "S256");
   url.searchParams.set("state", user.id);
 
-  const response = NextResponse.redirect(url.toString());
-  response.cookies.set("hubspot_code_verifier", codeVerifier, {
-    httpOnly: true,
-    secure: true,
-    sameSite: "lax",
-    maxAge: 600,
-  });
-
-  return response;
+  return NextResponse.redirect(url.toString());
 }
