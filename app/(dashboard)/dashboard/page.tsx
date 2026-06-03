@@ -5,7 +5,7 @@ export default async function DashboardPage() {
   const supabase = createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
-  const [{ data: insights }, { data: salesRecords }, { data: profile }] = await Promise.all([
+  const [{ data: insights }, { data: salesRecords }, { data: profile }, { data: goals }] = await Promise.all([
     supabase
       .from("insights")
       .select("*")
@@ -21,6 +21,13 @@ export default async function DashboardPage() {
       .select("full_name, plan, role")
       .eq("id", user!.id)
       .single(),
+    supabase
+      .from("goals")
+      .select("*, goal_checklist_items(*)")
+      .eq("user_id", user!.id)
+      .eq("status", "active")
+      .order("created_at", { ascending: false })
+      .limit(4),
   ]);
 
   return (
@@ -28,6 +35,7 @@ export default async function DashboardPage() {
       insights={insights || []}
       salesRecords={salesRecords || []}
       profile={profile}
+      goals={goals || []}
     />
   );
 }
