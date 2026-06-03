@@ -11,140 +11,254 @@ export default function OnboardingPage() {
   const router = useRouter();
   const [step, setStep] = useState<Step>(1);
   const [role, setRole] = useState<Role | null>(null);
+  const [teamName, setTeamName] = useState("");
   const [loading, setLoading] = useState(false);
-
-  async function handleRoleSelect(selectedRole: Role) {
-    setLoading(true);
-    setRole(selectedRole);
-    const supabase = createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    if (user) {
-      await supabase.from("users").update({ role: selectedRole }).eq("id", user.id);
-    }
-    setLoading(false);
-    setStep(2);
-  }
 
   async function handleFinish() {
     setLoading(true);
     const supabase = createClient();
     const { data: { user } } = await supabase.auth.getUser();
-    if (user) {
-      await supabase.from("users").update({ onboarding_completed: true }).eq("id", user.id);
+    if (!user) { router.push("/login"); return; }
+
+    await supabase.from("users").update({
+      role: role || "rep",
+      onboarded: true,
+    }).eq("id", user.id);
+
+    if (role === "manager" && teamName.trim()) {
+      const { data: team } = await supabase
+        .from("teams")
+        .insert({ name: teamName.trim(), owner_id: user.id })
+        .select()
+        .single();
+
+      if (team) {
+        await supabase.from("users").update({ team_id: team.id }).eq("id", user.id);
+      }
     }
-    router.push("/dashboard");
-    router.refresh();
+
+    router.push("/dashboard?welcome=true");
   }
 
+  const steps = [
+    { number: 1, label: "Your role" },
+    { number: 2, label: "Your setup" },
+    { number: 3, label: "Get started" },
+  ];
+
   return (
-    <div className="min-h-screen bg-gray-950 flex items-center justify-center px-4 py-12">
-      <div className="w-full max-w-lg">
+    <div className="min-h-screen bg-gray-950 flex flex-col items-center justify-center px-6 py-12">
+      {/* Logo */}
+      <div className="mb-10">
+        <span className="text-2xl font-bold text-white">Try<span className="text-blue-500">RepWise</span></span>
+      </div>
 
-        <div className="text-center mb-8">
-          <h1 className="text-2xl font-bold text-white tracking-tight">
-            Rep<span className="text-blue-500">Wise</span>
-          </h1>
-          <p className="text-gray-500 text-sm mt-1">Let us get you set up</p>
-        </div>
-
-        <div className="mb-8">
-          <div className="flex items-center gap-3 mb-3">
-            {[1, 2, 3].map((s) => (
-              <div key={s} className="flex items-center gap-3 flex-1">
-                <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold transition-all flex-shrink-0 ${
-                  step > s ? "bg-blue-600 text-white" :
-                  step === s ? "bg-blue-600 text-white ring-4 ring-blue-600/20" :
-                  "bg-gray-800 text-gray-500"
-                }`}>
-                  {step > s ? (
-                    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                    </svg>
-                  ) : s}
-                </div>
-                {s < 3 && <div className={`flex-1 h-px transition-all ${step > s ? "bg-blue-600" : "bg-gray-800"}`} />}
+      {/* Progress */}
+      <div className="flex items-center gap-3 mb-10">
+        {steps.map((s, i) => (
+          <div key={s.number} className="flex items-center gap-3">
+            <div className="flex items-center gap-2">
+              <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-all duration-300 ${
+                step > s.number
+                  ? "bg-blue-600 text-white"
+                  : step === s.number
+                  ? "bg-blue-600 text-white ring-4 ring-blue-500/20"
+                  : "bg-gray-800 text-gray-500 border border-gray-700"
+              }`}>
+                {step > s.number ? (
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
+                ) : s.number}
               </div>
-            ))}
+              <span className={`text-xs font-medium hidden sm:block ${step === s.number ? "text-white" : "text-gray-600"}`}>{s.label}</span>
+            </div>
+            {i < steps.length - 1 && (
+              <div className={`w-12 h-px transition-all duration-300 ${step > s.number ? "bg-blue-600" : "bg-gray-800"}`} />
+            )}
           </div>
-          <div className="w-full bg-gray-800 rounded-full h-1">
-            <div className="bg-blue-600 h-1 rounded-full transition-all duration-500" style={{ width: `${((step - 1) / 2) * 100}%` }} />
-          </div>
-        </div>
+        ))}
+      </div>
+
+      {/* Card */}
+      <div className="w-full max-w-lg bg-gray-900 border border-gray-800 rounded-3xl p-8 shadow-2xl">
+
+        {/* Step 1 — Role selection */}
         {step === 1 && (
-          <div className="bg-gray-900 border border-gray-800 rounded-2xl p-8">
-            <h2 className="text-xl font-semibold text-white mb-2">What is your role?</h2>
-            <p className="text-gray-400 text-sm mb-8">We will personalize RepWise based on how you work.</p>
-            <div className="grid grid-cols-2 gap-4">
-              <button onClick={() => handleRoleSelect("rep")} disabled={loading} className="group flex flex-col items-center gap-4 p-6 bg-gray-800 border border-gray-700 hover:border-blue-500 rounded-2xl transition-all disabled:opacity-50">
-                <div className="w-14 h-14 bg-blue-500/10 rounded-2xl flex items-center justify-center text-3xl group-hover:scale-110 transition-transform">🧑‍💼</div>
-                <div className="text-center">
-                  <div className="text-white font-semibold mb-1">I am a Rep</div>
-                  <div className="text-gray-400 text-xs leading-relaxed">I work in the field and want insights on my own performance</div>
-                </div>
-              </button>
-              <button onClick={() => handleRoleSelect("manager")} disabled={loading} className="group flex flex-col items-center gap-4 p-6 bg-gray-800 border border-gray-700 hover:border-blue-500 rounded-2xl transition-all disabled:opacity-50">
-                <div className="w-14 h-14 bg-blue-500/10 rounded-2xl flex items-center justify-center text-3xl group-hover:scale-110 transition-transform">👔</div>
-                <div className="text-center">
-                  <div className="text-white font-semibold mb-1">I am a Manager</div>
-                  <div className="text-gray-400 text-xs leading-relaxed">I manage a team and want team-wide analytics</div>
-                </div>
-              </button>
+          <div>
+            <div className="text-center mb-8">
+              <div className="text-4xl mb-3">👋</div>
+              <h1 className="text-2xl font-bold text-white mb-2">How do you use RepWise?</h1>
+              <p className="text-gray-400 text-sm">We will personalize your experience based on your role.</p>
             </div>
-          </div>
-        )}
-
-        {step === 2 && (
-          <div className="bg-gray-900 border border-gray-800 rounded-2xl p-8">
-            <h2 className="text-xl font-semibold text-white mb-2">Connect your data</h2>
-            <p className="text-gray-400 text-sm mb-8">Choose how to bring your sales data into RepWise. You can change this later.</p>
-            <div className="space-y-3 mb-6">
-              <a href="/upload" className="flex items-center gap-4 p-4 bg-gray-800 border border-gray-700 hover:border-blue-500 rounded-xl transition-all group">
-                <div className="w-10 h-10 bg-blue-500/10 rounded-xl flex items-center justify-center text-xl group-hover:scale-110 transition-transform">📄</div>
-                <div className="flex-1">
-                  <div className="text-white font-medium text-sm">Upload a CSV</div>
-                  <div className="text-gray-500 text-xs">Export from any CRM and upload in seconds</div>
-                </div>
-                <svg className="w-4 h-4 text-gray-600 group-hover:text-blue-400 transition" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" /></svg>
-              </a>
-              <div className="flex items-center gap-4 p-4 bg-gray-800/50 border border-gray-700/50 rounded-xl opacity-60 cursor-not-allowed">
-                <div className="w-10 h-10 bg-orange-500/10 rounded-xl flex items-center justify-center text-xl">🟠</div>
-                <div className="flex-1">
-                  <div className="text-white font-medium text-sm flex items-center gap-2">Connect HubSpot <span className="text-xs text-blue-400 bg-blue-500/10 border border-blue-500/20 px-2 py-0.5 rounded-full">Coming soon</span></div>
-                  <div className="text-gray-500 text-xs">Sync contacts, deals, and call logs</div>
-                </div>
-              </div>
-              <div className="flex items-center gap-4 p-4 bg-gray-800/50 border border-gray-700/50 rounded-xl opacity-60 cursor-not-allowed">
-                <div className="w-10 h-10 bg-blue-500/10 rounded-xl flex items-center justify-center text-xl">☁️</div>
-                <div className="flex-1">
-                  <div className="text-white font-medium text-sm flex items-center gap-2">Connect Salesforce <span className="text-xs text-blue-400 bg-blue-500/10 border border-blue-500/20 px-2 py-0.5 rounded-full">Coming soon</span></div>
-                  <div className="text-gray-500 text-xs">Sync opportunities, accounts, and activities</div>
-                </div>
-              </div>
+            <div className="grid grid-cols-2 gap-4 mb-8">
+              {[
+                {
+                  value: "rep" as Role,
+                  title: "Solo Rep",
+                  desc: "I want insights on my own performance and close rate",
+                  icon: "🎯",
+                  features: ["Personal insights", "Close rate tracking", "Territory analysis"],
+                },
+                {
+                  value: "manager" as Role,
+                  title: "Manager",
+                  desc: "I manage a team and want to track overall performance",
+                  icon: "👔",
+                  features: ["Team insights", "Rep benchmarking", "Manager dashboard"],
+                },
+              ].map(option => (
+                <button
+                  key={option.value}
+                  onClick={() => setRole(option.value)}
+                  className={`p-5 rounded-2xl border text-left transition-all duration-200 hover:-translate-y-0.5 ${
+                    role === option.value
+                      ? "bg-blue-600/10 border-blue-500 shadow-lg shadow-blue-500/10"
+                      : "bg-gray-800/50 border-gray-700 hover:border-gray-600"
+                  }`}
+                >
+                  <div className="text-2xl mb-3">{option.icon}</div>
+                  <h3 className="text-white font-bold mb-1 text-sm">{option.title}</h3>
+                  <p className={`text-xs leading-relaxed mb-3 ${role === option.value ? "text-blue-200/70" : "text-gray-500"}`}>{option.desc}</p>
+                  <ul className="space-y-1">
+                    {option.features.map(f => (
+                      <li key={f} className="flex items-center gap-1.5 text-xs">
+                        <svg className={`w-3 h-3 flex-shrink-0 ${role === option.value ? "text-blue-400" : "text-gray-600"}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
+                        <span className={role === option.value ? "text-blue-200/80" : "text-gray-600"}>{f}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </button>
+              ))}
             </div>
-            <button onClick={() => setStep(3)} className="w-full text-center text-gray-500 hover:text-gray-300 text-sm transition py-2">Skip for now</button>
-          </div>
-        )}
-
-        {step === 3 && (
-          <div className="bg-gray-900 border border-gray-800 rounded-2xl p-8 text-center">
-            <div className="w-20 h-20 bg-green-500/10 rounded-full flex items-center justify-center text-4xl mx-auto mb-6">🎉</div>
-            <h2 className="text-2xl font-bold text-white mb-3">You are all set</h2>
-            <p className="text-gray-400 text-sm mb-2">Welcome to RepWise{role === "manager" ? ", Manager" : ""}.</p>
-            <p className="text-gray-500 text-sm mb-8">Upload your first CSV to get AI-powered insights in under 2 minutes.</p>
-            <button onClick={handleFinish} disabled={loading} className="w-full bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white font-semibold rounded-xl px-6 py-3 text-sm transition flex items-center justify-center gap-2">
-              {loading ? "Loading..." : "Go to Dashboard"}
+            <button
+              onClick={() => setStep(2)}
+              disabled={!role}
+              className="w-full bg-blue-600 hover:bg-blue-500 disabled:opacity-40 disabled:cursor-not-allowed text-white font-semibold px-6 py-3.5 rounded-xl text-sm transition shadow-lg shadow-blue-500/20"
+            >
+              Continue
             </button>
           </div>
         )}
 
-        {step > 1 && step < 3 && (
-          <button onClick={() => setStep((s) => (s - 1) as Step)} className="flex items-center gap-1 text-gray-500 hover:text-gray-300 text-sm mt-4 mx-auto transition">
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" /></svg>
-            Back
-          </button>
+        {/* Step 2 — Setup */}
+        {step === 2 && (
+          <div>
+            <div className="text-center mb-8">
+              <div className="text-4xl mb-3">{role === "manager" ? "🏢" : "⚡"}</div>
+              <h1 className="text-2xl font-bold text-white mb-2">
+                {role === "manager" ? "Set up your team" : "Ready to analyze"}
+              </h1>
+              <p className="text-gray-400 text-sm">
+                {role === "manager"
+                  ? "Give your team a name so you can invite reps and track performance together."
+                  : "You are all set. RepWise works best with a CSV of your sales activity data."}
+              </p>
+            </div>
+
+            {role === "manager" ? (
+              <div className="mb-8">
+                <label className="block text-xs font-medium text-gray-400 mb-1.5">Team name</label>
+                <input
+                  type="text"
+                  value={teamName}
+                  onChange={e => setTeamName(e.target.value)}
+                  placeholder="e.g. Austin Solar Team"
+                  className="w-full bg-gray-800 border border-gray-700 text-white placeholder-gray-500 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
+                />
+                <p className="text-gray-600 text-xs mt-2">You can invite reps after setup from the Team page.</p>
+              </div>
+            ) : (
+              <div className="bg-gray-800/50 border border-gray-700 rounded-2xl p-5 mb-8">
+                <h3 className="text-white font-semibold text-sm mb-3">What you will need</h3>
+                <ul className="space-y-2.5">
+                  {[
+                    { icon: "📄", text: "A CSV export from your CRM or spreadsheet" },
+                    { icon: "📊", text: "Columns like: rep name, date, knocked, closed, deal value" },
+                    { icon: "🗺️", text: "Optional: ZIP code or territory for territory analysis" },
+                  ].map(item => (
+                    <li key={item.text} className="flex items-start gap-3">
+                      <span className="text-base flex-shrink-0">{item.icon}</span>
+                      <span className="text-gray-400 text-xs leading-relaxed">{item.text}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => setStep(1)}
+                className="flex-1 bg-gray-800 hover:bg-gray-700 border border-gray-700 text-white font-semibold px-6 py-3.5 rounded-xl text-sm transition"
+              >
+                Back
+              </button>
+              <button
+                onClick={() => setStep(3)}
+                disabled={role === "manager" && !teamName.trim()}
+                className="flex-1 bg-blue-600 hover:bg-blue-500 disabled:opacity-40 disabled:cursor-not-allowed text-white font-semibold px-6 py-3.5 rounded-xl text-sm transition shadow-lg shadow-blue-500/20"
+              >
+                Continue
+              </button>
+            </div>
+          </div>
         )}
 
+        {/* Step 3 — Done */}
+        {step === 3 && (
+          <div>
+            <div className="text-center mb-8">
+              <div className="text-5xl mb-3">🚀</div>
+              <h1 className="text-2xl font-bold text-white mb-2">You are all set!</h1>
+              <p className="text-gray-400 text-sm leading-relaxed">
+                Your account is ready. Upload your first CSV to get 8-10 AI-powered insights about where you are losing deals.
+              </p>
+            </div>
+
+            <div className="space-y-3 mb-8">
+              {[
+                { step: "1", title: "Go to your dashboard", desc: "See your insights overview and analytics", href: "/dashboard", primary: false },
+                { step: "2", title: "Upload your first CSV", desc: "Drag and drop any sales activity export", href: "/upload", primary: true },
+              ].map(item => (
+                <div key={item.step} className={`flex items-center gap-4 p-4 rounded-xl border transition ${item.primary ? "bg-blue-600/10 border-blue-500/30" : "bg-gray-800/50 border-gray-700"}`}>
+                  <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 ${item.primary ? "bg-blue-600 text-white" : "bg-gray-700 text-gray-300"}`}>
+                    {item.step}
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-white font-semibold text-sm">{item.title}</p>
+                    <p className="text-gray-500 text-xs">{item.desc}</p>
+                  </div>
+                  <svg className={`w-4 h-4 ${item.primary ? "text-blue-400" : "text-gray-600"}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" /></svg>
+                </div>
+              ))}
+            </div>
+
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => setStep(2)}
+                className="bg-gray-800 hover:bg-gray-700 border border-gray-700 text-white font-semibold px-4 py-3.5 rounded-xl text-sm transition"
+              >
+                Back
+              </button>
+              <button
+                onClick={handleFinish}
+                disabled={loading}
+                className="flex-1 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white font-semibold px-6 py-3.5 rounded-xl text-sm transition shadow-lg shadow-blue-500/20 flex items-center justify-center gap-2"
+              >
+                {loading ? (
+                  <>
+                    <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
+                    </svg>
+                    Setting up...
+                  </>
+                ) : "Go to dashboard →"}
+              </button>
+            </div>
+          </div>
+        )}
       </div>
+
+      <p className="text-gray-700 text-xs mt-6">No credit card required. Cancel anytime.</p>
     </div>
   );
 }
