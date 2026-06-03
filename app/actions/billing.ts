@@ -4,14 +4,13 @@ import { createClient } from "@/lib/supabase/server";
 import Stripe from "stripe";
 import { redirect } from "next/navigation";
 
-const stripe = process.env.STRIPE_SECRET_KEY
-  ? new Stripe(process.env.STRIPE_SECRET_KEY)
-  : null;
-
 export type PlanId = "essential" | "professional" | "team";
 
 export async function createCheckoutSession(plan: PlanId) {
-  if (!stripe) throw new Error("Stripe not configured");
+  const key = process.env.STRIPE_SECRET_KEY;
+  if (!key) throw new Error("Stripe secret key is not set");
+
+  const stripe = new Stripe(key);
   const supabase = createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error("Not authenticated");
@@ -39,24 +38,28 @@ export async function createCheckoutSession(plan: PlanId) {
     team: process.env.STRIPE_TEAM_PRICE_ID!,
   };
 
+  const priceId = priceIds[plan];
+  if (!priceId) throw new Error(`Price ID not found for plan: ${plan}`);
+
   const session = await stripe.checkout.sessions.create({
     customer: customerId,
     mode: "subscription",
-    line_items: [{ price: priceIds[plan], quantity: 1 }],
-    success_url: `https://tryrepwise.com/dashboard?upgraded=true`,
-cancel_url: `https://tryrepwise.com/billing?canceled=true`,
+    line_items: [{ price: priceId, quantity: 1 }],
+    success_url: "https://tryrepwise.com/dashboard?upgraded=true",
+    cancel_url: "https://tryrepwise.com/billing?canceled=true",
     allow_promotion_codes: true,
-    subscription_data: {
-      trial_period_days: 14,
-    },
     metadata: { supabase_user_id: user.id, plan },
   });
 
-  redirect(session.url!);
+  if (!session.url) throw new Error("No checkout URL returned");
+  redirect(session.url);
 }
 
 export async function createPortalSession() {
-  if (!stripe) throw new Error("Stripe not configured");
+  const key = process.env.STRIPE_SECRET_KEY;
+  if (!key) throw new Error("Stripe secret key is not set");
+
+  const stripe = new Stripe(key);
   const supabase = createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error("Not authenticated");
@@ -71,10 +74,8 @@ export async function createPortalSession() {
 
   const session = await stripe.billingPortal.sessions.create({
     customer: profile.stripe_customer_id,
-    return_url: `${process.env.NEXT_PUBLIC_APP_URL}/billing`,
+    return_url: "https://tryrepwise.com/billing",
   });
 
   redirect(session.url);
 }
-
-s
