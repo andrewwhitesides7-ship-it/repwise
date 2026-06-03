@@ -229,23 +229,28 @@ const { data: profile } = await supabase
     .single();
 
 if (profile?.plan === "free") {
-    const { count: uploadCount } = await supabase
-      .from("uploads")
-      .select("*", { count: "exact", head: true })
-      .eq("user_id", user.id);
+  const { count: uploadCount } = await supabase
+    .from("uploads")
+    .select("*", { count: "exact", head: true })
+    .eq("user_id", user.id);
 
-    const { count: insightCount } = await supabase
-      .from("insights")
-      .select("*", { count: "exact", head: true })
-      .eq("user_id", user.id);
+  const { count: insightCount } = await supabase
+    .from("insights")
+    .select("*", { count: "exact", head: true })
+    .eq("user_id", user.id);
 
-    if ((uploadCount || 0) >= 1) {
-      throw new Error("FREE_LIMIT_UPLOADS");
-    }
-    if ((insightCount || 0) >= 3) {
-      throw new Error("FREE_LIMIT_INSIGHTS");
-    }
+  if ((uploadCount || 0) > 1) {
+    await supabase.from("uploads").update({ status: "failed", error_message: "Free limit reached" }).eq("id", uploadId);
+    redirect("/billing?limit=uploads");
+  }
+  if ((insightCount || 0) >= 3) {
+    await supabase.from("uploads").update({ status: "failed", error_message: "Free limit reached" }).eq("id", uploadId);
+    redirect("/billing?limit=insights");
+  }
 }
+
+
+
     await supabase
       .from("uploads")
       .update({ status: "complete", row_count: rowCount })
