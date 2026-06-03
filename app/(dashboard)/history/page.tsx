@@ -114,7 +114,7 @@ export default async function HistoryPage() {
 
             {upload.insights.length > 0 ? (
               <div className="p-4 space-y-2">
-                {upload.insights.map((insight) => {
+                {upload.insights.map((insight: any) => {
                   const config = priorityConfig[insight.priority as keyof typeof priorityConfig] || priorityConfig.pattern;
                   return (
                     <div key={insight.id} className={`p-4 rounded-xl border transition ${insight.is_dismissed ? "opacity-40 bg-gray-800/30 border-gray-800" : "bg-gray-800/50 border-gray-700/50"}`}>

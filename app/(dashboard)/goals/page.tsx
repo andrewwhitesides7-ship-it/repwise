@@ -5,7 +5,7 @@ export default async function GoalsPage() {
   const supabase = createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
-  const [{ data: goals }, { data: hasData }] = await Promise.all([
+  const [{ data: goals }, { count: salesCount }] = await Promise.all([
     supabase
       .from("goals")
       .select(`*, goal_checklist_items(*)`)
@@ -14,9 +14,10 @@ export default async function GoalsPage() {
       .order("created_at", { ascending: false }),
     supabase
       .from("sales_records")
-      .select("id", { count: "exact", head: true })
+      .select("*", { count: "exact", head: true })
       .eq("user_id", user!.id),
   ]);
 
-  return <GoalsClient goals={goals || []} hasData={!!hasData} />;
+  return <GoalsClient goals={goals || []} hasData={(salesCount || 0) > 0} />;
 }
+
