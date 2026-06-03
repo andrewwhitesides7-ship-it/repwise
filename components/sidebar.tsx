@@ -16,20 +16,20 @@ const navLinks = [
     ),
   },
   {
-    href: "/upload",
-    label: "Upload",
-    icon: (
-      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
-      </svg>
-    ),
-  },
-  {
     href: "/goals",
     label: "Goals",
     icon: (
       <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
         <path strokeLinecap="round" strokeLinejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+      </svg>
+    ),
+  },
+  {
+    href: "/team",
+    label: "Team",
+    icon: (
+      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
       </svg>
     ),
   },
@@ -43,11 +43,11 @@ const navLinks = [
     ),
   },
   {
-    href: "/team",
-    label: "Team",
+    href: "/upload",
+    label: "Upload",
     icon: (
       <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
+        <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
       </svg>
     ),
   },
@@ -77,14 +77,12 @@ export default function Sidebar() {
 
   const SidebarContent = () => (
     <div className="flex flex-col h-full">
-      {/* Logo */}
       <div className="px-5 py-5 border-b border-gray-800">
         <Link href="/dashboard" className="text-lg font-bold text-white tracking-tight">
           Try<span className="text-blue-500">RepWise</span>
         </Link>
       </div>
 
-      {/* Nav */}
       <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
         {navLinks.map((link) => {
           const isActive = pathname === link.href || pathname.startsWith(link.href + "/");
@@ -106,7 +104,6 @@ export default function Sidebar() {
         })}
       </nav>
 
-      {/* Bottom */}
       <div className="px-3 py-4 border-t border-gray-800 space-y-1">
         <Link
           href="/help"
@@ -133,33 +130,23 @@ export default function Sidebar() {
 
   return (
     <>
-      {/* Desktop sidebar */}
       <aside className="hidden md:flex w-56 flex-col bg-gray-900 border-r border-gray-800 h-screen flex-shrink-0">
         <SidebarContent />
       </aside>
 
-      {/* Mobile top bar */}
       <div className="md:hidden fixed top-0 left-0 right-0 z-40 bg-gray-950/90 backdrop-blur border-b border-gray-800 px-4 py-3 flex items-center justify-between">
         <Link href="/dashboard" className="text-base font-bold text-white">
           Try<span className="text-blue-500">RepWise</span>
         </Link>
-        <button
-          onClick={() => setMobileOpen(!mobileOpen)}
-          className="text-gray-400 hover:text-white transition p-1"
-        >
+        <button onClick={() => setMobileOpen(!mobileOpen)} className="text-gray-400 hover:text-white transition p-1">
           {mobileOpen ? (
-            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-            </svg>
+            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
           ) : (
-            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
-            </svg>
+            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" /></svg>
           )}
         </button>
       </div>
 
-      {/* Mobile drawer */}
       {mobileOpen && (
         <div className="md:hidden fixed inset-0 z-30">
           <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setMobileOpen(false)} />
