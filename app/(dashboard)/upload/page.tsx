@@ -89,7 +89,14 @@ function UploadPageInner() {
       await syncCRM(provider);
     } catch (err: unknown) {
       if (err instanceof Error && err.message.includes("NEXT_REDIRECT")) return;
-      setError(err instanceof Error ? err.message : "Sync failed.");
+      const msg = err instanceof Error ? err.message : "Something went wrong.";
+if (msg === "FREE_LIMIT_UPLOADS") {
+  setError("You have used your free CSV upload. Upgrade to Essential for unlimited uploads.");
+} else if (msg === "FREE_LIMIT_INSIGHTS") {
+  setError("You have used your free insights. Upgrade to Essential for unlimited insights.");
+} else {
+  setError(msg);
+}
       setSyncing(null);
     }
   }

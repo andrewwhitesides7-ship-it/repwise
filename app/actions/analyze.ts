@@ -222,7 +222,30 @@ export async function analyzeUpload(uploadId: string, fileContent: string) {
     }));
 
     await supabase.from("insights").insert(insightRows);
+const { data: profile } = await supabase
+    .from("users")
+    .select("plan")
+    .eq("id", user.id)
+    .single();
 
+if (profile?.plan === "free") {
+    const { count: uploadCount } = await supabase
+      .from("uploads")
+      .select("*", { count: "exact", head: true })
+      .eq("user_id", user.id);
+
+    const { count: insightCount } = await supabase
+      .from("insights")
+      .select("*", { count: "exact", head: true })
+      .eq("user_id", user.id);
+
+    if ((uploadCount || 0) >= 1) {
+      throw new Error("FREE_LIMIT_UPLOADS");
+    }
+    if ((insightCount || 0) >= 3) {
+      throw new Error("FREE_LIMIT_INSIGHTS");
+    }
+}
     await supabase
       .from("uploads")
       .update({ status: "complete", row_count: rowCount })
