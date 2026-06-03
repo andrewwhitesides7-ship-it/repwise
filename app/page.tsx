@@ -4,8 +4,8 @@ import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 
 const insights = [
-  { priority: "critical", category: "Time of Day", title: "You're knocking during dead hours", body: "73% of your closes happen between 4-7pm but you're spending 40% of your time knocking before noon.", metric: "+3.4 closes/week" },
-  { priority: "opportunity", category: "Territory", title: "ZIP 78704 is your goldmine", body: "This ZIP has a 34% contact rate vs your average of 19%. You've only knocked 12 doors there this month.", metric: "34% contact rate" },
+  { priority: "critical", category: "Time of Day", title: "You are knocking during dead hours", body: "73% of your closes happen between 4-7pm but you are spending 40% of your time knocking before noon.", metric: "+3.4 closes/week" },
+  { priority: "opportunity", category: "Territory", title: "ZIP 78704 is your goldmine", body: "This ZIP has a 34% contact rate vs your average of 19%. You have only knocked 12 doors there this month.", metric: "34% contact rate" },
   { priority: "critical", category: "Rep Performance", title: "Marcus is burning doors", body: "Marcus knocked 54 doors last week with 1 close. Team average is 1 per 11 doors.", metric: "1 per 54 doors" },
   { priority: "pattern", category: "Follow-Ups", title: "12 warm leads ghosted", body: "You scheduled follow-ups with 12 contacts and never returned. Estimated $28,000 in lost revenue.", metric: "$28k est. lost" },
   { priority: "opportunity", category: "Deal Value", title: "Sara closes 34% above average", body: "Sara's average deal is $23,400 vs team average of $17,500. Her approach is worth replicating.", metric: "$23,400 avg deal" },
@@ -51,50 +51,73 @@ function StatCard({ value, suffix, label, delay }: { value: number; suffix: stri
   );
 }
 
-function EmailCapture({ source }: { source: string }) {
+function WelcomePopup({ onClose }: { onClose: () => void }) {
   const [email, setEmail] = useState("");
   const [submitted, setSubmitted] = useState(false);
   const [loading, setLoading] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!email) return;
     setLoading(true);
     await new Promise(r => setTimeout(r, 800));
     setSubmitted(true);
     setLoading(false);
-  }
-
-  if (submitted) {
-    return (
-      <div className="flex items-center gap-3 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl px-6 py-4">
-        <div className="w-8 h-8 bg-emerald-500/20 rounded-full flex items-center justify-center text-emerald-400">✓</div>
-        <div>
-          <p className="text-emerald-400 font-semibold text-sm">You're on the list</p>
-          <p className="text-gray-500 text-xs">We'll reach out within 24 hours.</p>
-        </div>
-      </div>
-    );
+    setTimeout(onClose, 2500);
   }
 
   return (
-    <form onSubmit={handleSubmit} className="flex flex-col sm:flex-row gap-3">
-      <input
-        type="email"
-        required
-        value={email}
-        onChange={(e) => setEmail(e.target.value)}
-        placeholder="your@email.com"
-        className="flex-1 bg-white/5 border border-white/10 text-white placeholder-gray-500 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition backdrop-blur"
-      />
-      <button
-        type="submit"
-        disabled={loading}
-        className="bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white font-semibold px-6 py-3 rounded-xl text-sm transition whitespace-nowrap shadow-lg shadow-blue-500/20"
-      >
-        {loading ? "Joining..." : "Get early access"}
-      </button>
-    </form>
+    <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
+      <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={onClose} />
+      <div className="relative bg-gray-900 border border-gray-700 rounded-3xl p-8 max-w-md w-full shadow-2xl animate-in fade-in zoom-in duration-300">
+        <button onClick={onClose} className="absolute top-4 right-4 text-gray-600 hover:text-gray-400 transition p-1">
+          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+        {submitted ? (
+          <div className="text-center py-6">
+            <div className="text-5xl mb-4">🎉</div>
+            <h3 className="text-white font-bold text-xl mb-2">You are in!</h3>
+            <p className="text-gray-400 text-sm">Check your inbox — we will be in touch within 24 hours.</p>
+          </div>
+        ) : (
+          <>
+            <div className="text-center mb-6">
+              <div className="w-16 h-16 bg-blue-500/10 border border-blue-500/20 rounded-2xl flex items-center justify-center text-3xl mx-auto mb-4">🧠</div>
+              <h3 className="text-white font-bold text-xl mb-2">Get a free sales analysis</h3>
+              <p className="text-gray-400 text-sm leading-relaxed">
+                Drop your email and we will show you exactly where your team is losing deals — completely free.
+              </p>
+            </div>
+            <form onSubmit={handleSubmit} className="space-y-3">
+              <input
+                type="email"
+                required
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="your@email.com"
+                className="w-full bg-gray-800 border border-gray-700 text-white placeholder-gray-500 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
+                autoFocus
+              />
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white font-semibold px-6 py-3 rounded-xl text-sm transition shadow-lg shadow-blue-500/20"
+              >
+                {loading ? "Sending..." : "Get my free analysis"}
+              </button>
+            </form>
+            <div className="flex items-center justify-center gap-4 mt-4">
+              <p className="text-gray-600 text-xs">No spam. No credit card.</p>
+              <span className="text-gray-800">·</span>
+              <button onClick={onClose} className="text-gray-600 hover:text-gray-400 text-xs transition">
+                Skip for now
+              </button>
+            </div>
+          </>
+        )}
+      </div>
+    </div>
   );
 }
 
@@ -121,8 +144,8 @@ function ExitPopup({ onClose }: { onClose: () => void }) {
         {submitted ? (
           <div className="text-center py-4">
             <div className="text-4xl mb-3">🎉</div>
-            <h3 className="text-white font-bold text-lg mb-1">You're in!</h3>
-            <p className="text-gray-400 text-sm">We'll be in touch soon.</p>
+            <h3 className="text-white font-bold text-lg mb-1">You are in!</h3>
+            <p className="text-gray-400 text-sm">We will reach out within 24 hours.</p>
           </div>
         ) : (
           <>
@@ -130,7 +153,7 @@ function ExitPopup({ onClose }: { onClose: () => void }) {
               <div className="text-3xl mb-3">👋</div>
               <h3 className="text-white font-bold text-xl mb-2">Wait — before you go</h3>
               <p className="text-gray-400 text-sm leading-relaxed">
-                Get a free analysis of your sales data. Drop your email and we'll show you exactly where you're losing deals.
+                Get a free analysis of your sales data. We will show you exactly where you are losing deals.
               </p>
             </div>
             <form onSubmit={handleSubmit} className="space-y-3">
@@ -158,32 +181,39 @@ export default function LandingPage() {
   const [activeInsight, setActiveInsight] = useState(0);
   const [isVisible, setIsVisible] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const [showWelcomePopup, setShowWelcomePopup] = useState(false);
   const [showExitPopup, setShowExitPopup] = useState(false);
-  const [hasShownPopup, setHasShownPopup] = useState(false);
+  const [hasShownExit, setHasShownExit] = useState(false);
   const [scrollProgress, setScrollProgress] = useState(0);
 
   useEffect(() => {
     setIsVisible(true);
+
+    // Show welcome popup after 2 seconds
+    const welcomeTimer = setTimeout(() => setShowWelcomePopup(true), 2000);
+
     const handleScroll = () => {
       setScrolled(window.scrollY > 20);
       const total = document.body.scrollHeight - window.innerHeight;
       setScrollProgress(total > 0 ? (window.scrollY / total) * 100 : 0);
     };
-    window.addEventListener("scroll", handleScroll);
 
     const handleMouseLeave = (e: MouseEvent) => {
-      if (e.clientY <= 0 && !hasShownPopup) {
+      if (e.clientY <= 0 && !hasShownExit && !showWelcomePopup) {
         setShowExitPopup(true);
-        setHasShownPopup(true);
+        setHasShownExit(true);
       }
     };
+
+    window.addEventListener("scroll", handleScroll);
     document.addEventListener("mouseleave", handleMouseLeave);
 
     return () => {
+      clearTimeout(welcomeTimer);
       window.removeEventListener("scroll", handleScroll);
       document.removeEventListener("mouseleave", handleMouseLeave);
     };
-  }, [hasShownPopup]);
+  }, [hasShownExit, showWelcomePopup]);
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -195,10 +225,11 @@ export default function LandingPage() {
   return (
     <div className="min-h-screen bg-gray-950 text-white overflow-x-hidden">
 
-      {/* Scroll progress bar */}
-      <div className="fixed top-0 left-0 z-50 h-0.5 bg-blue-500 transition-all duration-150" style={{ width: `${scrollProgress}%` }} />
+      {/* Scroll progress */}
+      <div className="fixed top-0 left-0 z-50 h-0.5 bg-gradient-to-r from-blue-500 to-indigo-500 transition-all duration-150" style={{ width: `${scrollProgress}%` }} />
 
-      {/* Exit popup */}
+      {/* Popups */}
+      {showWelcomePopup && <WelcomePopup onClose={() => setShowWelcomePopup(false)} />}
       {showExitPopup && <ExitPopup onClose={() => setShowExitPopup(false)} />}
 
       {/* Nav */}
@@ -215,7 +246,7 @@ export default function LandingPage() {
         <div className="flex items-center gap-3">
           <Link href="/login" className="text-sm text-gray-400 hover:text-white transition">Sign in</Link>
           <Link href="/signup" className="text-sm bg-blue-600 hover:bg-blue-500 text-white font-semibold px-4 py-2 rounded-xl transition shadow-lg shadow-blue-500/20">
-            Get started
+            Get started free
           </Link>
         </div>
       </nav>
@@ -225,19 +256,18 @@ export default function LandingPage() {
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
           <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[800px] h-[800px] bg-blue-600/8 rounded-full blur-3xl" />
           <div className="absolute top-1/2 left-1/4 w-[400px] h-[400px] bg-indigo-600/8 rounded-full blur-3xl" />
-          <div className="absolute bottom-1/4 right-1/4 w-[300px] h-[300px] bg-blue-400/5 rounded-full blur-3xl" />
         </div>
 
         <div className={`max-w-6xl mx-auto w-full grid md:grid-cols-2 gap-16 items-center transition-all duration-700 ${isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"}`}>
           <div>
             <div className="inline-flex items-center gap-2 bg-blue-500/10 border border-blue-500/20 text-blue-400 text-xs font-medium px-3 py-1.5 rounded-full mb-6">
               <span className="w-1.5 h-1.5 bg-blue-400 rounded-full animate-pulse" />
-              AI-powered sales intelligence
+              AI-powered · Updated daily · 14-day free trial
             </div>
             <h1 className="text-5xl md:text-6xl font-bold tracking-tight leading-[1.1] mb-6">
               Stop guessing.<br />
               Start{" "}
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-blue-600">closing more.</span>
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-indigo-400">closing more.</span>
             </h1>
             <p className="text-gray-400 text-lg leading-relaxed mb-8">
               RepWise analyzes your field sales data and surfaces exactly where you are leaving money on the table. Upload a CSV and get 8-10 actionable insights in under 2 minutes.
@@ -253,12 +283,19 @@ export default function LandingPage() {
               <span className="text-xs text-gray-600">+ CSV</span>
             </div>
 
-            <EmailCapture source="hero" />
+            <div className="flex flex-col sm:flex-row gap-3 mb-6">
+              <Link href="/signup" className="text-center bg-blue-600 hover:bg-blue-500 text-white font-semibold px-8 py-3.5 rounded-xl text-sm transition shadow-lg shadow-blue-500/20 hover:shadow-blue-500/30 hover:-translate-y-0.5 duration-200">
+                Start free — no card needed
+              </Link>
+              <a href="#pricing" className="text-center bg-gray-800 hover:bg-gray-700 text-white font-semibold px-8 py-3.5 rounded-xl text-sm transition hover:-translate-y-0.5 duration-200">
+                See pricing
+              </a>
+            </div>
 
-            <div className="flex items-center gap-6 mt-6">
+            <div className="flex items-center gap-4">
               <div className="flex -space-x-2">
-                {["J", "S", "M", "P"].map((l, i) => (
-                  <div key={i} className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 border-2 border-gray-950 flex items-center justify-center text-white text-xs font-bold">
+                {["J", "S", "M", "P", "T"].map((l, i) => (
+                  <div key={i} className="w-7 h-7 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 border-2 border-gray-950 flex items-center justify-center text-white text-xs font-bold">
                     {l}
                   </div>
                 ))}
@@ -273,7 +310,7 @@ export default function LandingPage() {
               <div className="flex items-center justify-between mb-4 pb-3 border-b border-gray-800">
                 <div className="flex items-center gap-2">
                   <div className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />
-                  <span className="text-xs text-gray-400 font-medium">Live insights</span>
+                  <span className="text-xs text-gray-400 font-medium">Live insights — Updated today</span>
                 </div>
                 <span className="text-xs text-gray-600">{insights.length} found</span>
               </div>
@@ -321,8 +358,8 @@ export default function LandingPage() {
         <div className="max-w-4xl mx-auto px-8 grid grid-cols-2 md:grid-cols-4 gap-8">
           <StatCard value={8} suffix="-10" label="Insights per upload" delay={0} />
           <StatCard value={2} suffix=" min" label="Analysis time" delay={100} />
-          <StatCard value={200} suffix="/mo" label="Solo rep plan" delay={200} />
-          <StatCard value={150} suffix="/seat" label="Team plan" delay={300} />
+          <StatCard value={500} suffix="+" label="Reps using RepWise" delay={200} />
+          <StatCard value={14} suffix=" day" label="Free trial" delay={300} />
         </div>
       </section>
 
@@ -336,7 +373,7 @@ export default function LandingPage() {
           {[
             { emoji: "⏰", title: "Time of Day Analysis", body: "Know which hours close best. Stop wasting knocks at the wrong time of day." },
             { emoji: "🗺️", title: "Territory Intelligence", body: "Find your highest-converting ZIP codes and double down where it matters." },
-            { emoji: "👥", title: "Rep Benchmarking", body: "See who's outperforming and who needs coaching before numbers slip." },
+            { emoji: "👥", title: "Rep Benchmarking", body: "See who is outperforming and who needs coaching before numbers slip." },
             { emoji: "🔔", title: "Daily Fresh Insights", body: "New AI insights every morning. Never make decisions on stale data again." },
             { emoji: "🏷️", title: "Priority Tags", body: "Every insight tagged Critical, Opportunity, or Pattern. Fix the right thing first." },
             { emoji: "🔌", title: "Easy Integrations", body: "Connect Salesforce, HubSpot, Pipedrive, or just drop in a CSV." },
@@ -350,121 +387,88 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* How it works */}
-      <section className="bg-gray-900/30 border-y border-gray-800/50 py-24">
-        <div className="max-w-4xl mx-auto px-8">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl font-bold mb-4 tracking-tight">Up and running in 2 minutes</h2>
-            <p className="text-gray-400">No setup call. No onboarding doc. Just connect and go.</p>
-          </div>
-          <div className="grid md:grid-cols-3 gap-8">
-            {[
-              { step: "01", title: "Connect or upload", body: "Link your CRM for automatic syncing or drop in a CSV from any tool.", icon: "📤" },
-              { step: "02", title: "AI analyzes your data", body: "Claude processes your activity and finds patterns humans miss in seconds.", icon: "🧠" },
-              { step: "03", title: "Get daily insights", body: "Fresh insights every morning tagged Critical, Opportunity, or Pattern.", icon: "📊" },
-            ].map((item) => (
-              <div key={item.step} className="text-center">
-                <div className="w-14 h-14 bg-blue-500/10 border border-blue-500/20 rounded-2xl flex items-center justify-center text-2xl mx-auto mb-4">{item.icon}</div>
-                <div className="text-xs font-bold text-blue-500 mb-2 tracking-widest">{item.step}</div>
-                <h3 className="text-white font-semibold mb-2">{item.title}</h3>
-                <p className="text-gray-500 text-sm leading-relaxed">{item.body}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Integrations */}
-      <section className="max-w-4xl mx-auto px-8 py-24">
-        <div className="text-center mb-12">
-          <h2 className="text-4xl font-bold mb-4 tracking-tight">Works with your existing tools</h2>
-          <p className="text-gray-400">Connect your CRM for automatic syncing or upload a CSV anytime.</p>
-        </div>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-          {[
-            { name: "Salesforce", logo: "☁️", desc: "Leads and opportunities" },
-            { name: "HubSpot", logo: "🟠", desc: "Contacts and deals" },
-            { name: "Pipedrive", logo: "🟢", desc: "Pipeline activity" },
-            { name: "Zoho CRM", logo: "🔵", desc: "Accounts and visits" },
-          ].map((crm) => (
-            <div key={crm.name} className="bg-gray-900 border border-gray-800 rounded-2xl p-5 text-center hover:border-gray-700 hover:-translate-y-1 transition-all duration-300">
-              <div className="text-3xl mb-3">{crm.logo}</div>
-              <div className="text-white font-semibold text-sm mb-1">{crm.name}</div>
-              <div className="text-gray-600 text-xs">{crm.desc}</div>
-              <div className="mt-3 text-xs text-blue-400 bg-blue-500/10 border border-blue-500/20 rounded-full px-2 py-0.5 inline-block">Coming soon</div>
-            </div>
-          ))}
-        </div>
-        <div className="bg-gray-900 border border-gray-800 rounded-2xl p-5 flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <div className="w-10 h-10 bg-gray-800 rounded-xl flex items-center justify-center text-xl">📄</div>
-            <div>
-              <div className="text-white font-semibold text-sm">CSV Upload</div>
-              <div className="text-gray-500 text-xs">Export from any tool. Available right now.</div>
-            </div>
-          </div>
-          <Link href="/signup" className="text-sm bg-blue-600 hover:bg-blue-500 text-white font-semibold px-4 py-2 rounded-xl transition">Try it free</Link>
-        </div>
-      </section>
-
       {/* Pricing */}
       <section id="pricing" className="bg-gray-900/30 border-y border-gray-800/50 py-24">
-        <div className="max-w-4xl mx-auto px-8">
+        <div className="max-w-5xl mx-auto px-8">
           <div className="text-center mb-16">
-            <h2 className="text-4xl font-bold mb-4 tracking-tight">Simple pricing</h2>
-            <p className="text-gray-400">Cancel anytime. No contracts. No surprises.</p>
+            <h2 className="text-4xl font-bold mb-4 tracking-tight">Simple, transparent pricing</h2>
+            <p className="text-gray-400">Start free. Upgrade when you are ready. Cancel anytime.</p>
           </div>
-          <div className="grid md:grid-cols-2 gap-6 max-w-2xl mx-auto">
+
+          <div className="grid md:grid-cols-4 gap-4 mb-6">
             {[
               {
-                name: "Solo Rep", price: "$200", period: "/month",
-                description: "For individual field reps who want a competitive edge.",
-                features: ["Unlimited CSV uploads", "CRM integration (coming soon)", "8-10 AI insights per upload", "Daily fresh insights", "Time of day analysis", "Priority tagging", "Email support"],
-                cta: "Get started", highlight: false,
+                name: "Free", price: "$0", period: "/month",
+                desc: "Try it risk-free. No card required.",
+                features: ["3 insights/month", "1 CSV upload", "Basic dashboard"],
+                cta: "Start free", href: "/signup", highlight: false, badge: null,
               },
               {
-                name: "Team", price: "$150", period: "/seat/month",
-                description: "For managers running a team of reps.",
-                features: ["Everything in Solo", "Daily team insights", "Rep leaderboard", "Rep breakdowns", "Manager dashboard", "Invite unlimited reps", "Priority support"],
-                cta: "Start team trial", highlight: true,
+                name: "Essential", price: "$99", period: "/month",
+                desc: "For solo reps serious about improving.",
+                features: ["Unlimited insights", "Unlimited uploads", "Goal tracking", "Weekly reports", "PDF exports"],
+                cta: "Start trial", href: "/signup", highlight: false, badge: null,
+              },
+              {
+                name: "Professional", price: "$199", period: "/month",
+                desc: "For growing teams who want to collaborate.",
+                features: ["Everything in Essential", "5-person collaboration", "AI coaching", "Custom goals", "90-day history"],
+                cta: "Start trial", href: "/signup", highlight: true, badge: "Recommended",
+              },
+              {
+                name: "Team", price: "$499", period: "/month",
+                desc: "Unlimited seats. Full manager control.",
+                features: ["Unlimited members", "Manager dashboard", "Leaderboards", "CRM integrations", "Slack support"],
+                cta: "Start trial", href: "/signup", highlight: false, badge: null,
               },
             ].map((plan) => (
-              <div key={plan.name} className={`rounded-2xl p-8 border transition-all duration-300 hover:-translate-y-1 ${plan.highlight ? "bg-blue-600 border-blue-500 shadow-xl shadow-blue-500/20" : "bg-gray-900 border-gray-800 hover:border-gray-700"}`}>
-                <h3 className="text-lg font-bold text-white mb-1">{plan.name}</h3>
-                <div className="flex items-end gap-1 mb-3">
-                  <span className="text-4xl font-bold text-white">{plan.price}</span>
-                  <span className={`text-sm mb-1 ${plan.highlight ? "text-blue-200" : "text-gray-400"}`}>{plan.period}</span>
+              <div key={plan.name} className={`relative rounded-2xl p-6 border flex flex-col hover:-translate-y-1 transition-all duration-300 ${plan.highlight ? "bg-blue-600 border-blue-500 shadow-xl shadow-blue-500/20" : "bg-gray-900 border-gray-800 hover:border-gray-700"}`}>
+                {plan.badge && (
+                  <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-white text-blue-600 text-xs font-bold px-3 py-1 rounded-full whitespace-nowrap">
+                    {plan.badge}
+                  </div>
+                )}
+                <h3 className="text-white font-bold mb-1">{plan.name}</h3>
+                <div className="flex items-end gap-1 mb-2">
+                  <span className="text-3xl font-bold text-white">{plan.price}</span>
+                  <span className={`text-xs mb-1 ${plan.highlight ? "text-blue-200" : "text-gray-500"}`}>{plan.period}</span>
                 </div>
-                <p className={`text-sm mb-6 ${plan.highlight ? "text-blue-100" : "text-gray-400"}`}>{plan.description}</p>
-                <ul className="space-y-2.5 mb-8">
+                <p className={`text-xs mb-4 leading-relaxed ${plan.highlight ? "text-blue-100" : "text-gray-500"}`}>{plan.desc}</p>
+                <ul className="space-y-1.5 mb-6 flex-1">
                   {plan.features.map((f) => (
-                    <li key={f} className="flex items-center gap-2 text-sm">
-                      <svg className={`w-4 h-4 flex-shrink-0 ${plan.highlight ? "text-blue-200" : "text-blue-500"}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                    <li key={f} className="flex items-center gap-2 text-xs">
+                      <svg className={`w-3.5 h-3.5 flex-shrink-0 ${plan.highlight ? "text-blue-200" : "text-blue-500"}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
                         <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                       </svg>
-                      <span className={plan.highlight ? "text-blue-50" : "text-gray-300"}>{f}</span>
+                      <span className={plan.highlight ? "text-blue-50" : "text-gray-400"}>{f}</span>
                     </li>
                   ))}
                 </ul>
-                <Link href="/signup" className={`block text-center font-semibold px-6 py-3 rounded-xl text-sm transition ${plan.highlight ? "bg-white text-blue-600 hover:bg-blue-50" : "bg-blue-600 hover:bg-blue-500 text-white"}`}>
+                <Link href={plan.href} className={`block text-center font-semibold px-4 py-2.5 rounded-xl text-sm transition ${plan.highlight ? "bg-white text-blue-600 hover:bg-blue-50" : "bg-blue-600 hover:bg-blue-500 text-white"}`}>
                   {plan.cta}
                 </Link>
               </div>
             ))}
           </div>
+
+          <div className="text-center">
+            <p className="text-gray-600 text-sm">Need 50+ reps? <Link href="/contact" className="text-blue-400 hover:text-blue-300">Contact us for Enterprise pricing</Link></p>
+          </div>
         </div>
       </section>
 
-      {/* Email capture section */}
+      {/* CTA */}
       <section className="max-w-2xl mx-auto px-8 py-24 text-center">
-        <div className="bg-gradient-to-br from-blue-600/20 to-indigo-600/10 border border-blue-500/20 rounded-3xl p-12">
+        <div className="bg-gradient-to-br from-blue-600/20 via-indigo-600/10 to-transparent border border-blue-500/20 rounded-3xl p-12">
           <div className="text-4xl mb-4">🚀</div>
           <h2 className="text-3xl font-bold mb-4 tracking-tight">Ready to close more deals?</h2>
           <p className="text-gray-400 mb-8 leading-relaxed">
-            Join 500+ field sales reps who use RepWise to find and fix exactly where they're losing deals.
+            Join 500+ field sales reps who use RepWise to find and fix exactly where they are losing deals.
           </p>
-          <EmailCapture source="cta" />
-          <p className="text-gray-600 text-xs mt-4">Or <Link href="/signup" className="text-blue-400 hover:text-blue-300">create an account</Link> and start right now.</p>
+          <Link href="/signup" className="inline-block bg-blue-600 hover:bg-blue-500 text-white font-bold px-8 py-4 rounded-xl text-sm transition shadow-lg shadow-blue-500/20 hover:-translate-y-0.5 duration-200">
+            Start free — 14 day trial, no card needed
+          </Link>
+          <p className="text-gray-600 text-xs mt-4">No credit card required. Cancel anytime.</p>
         </div>
       </section>
 
