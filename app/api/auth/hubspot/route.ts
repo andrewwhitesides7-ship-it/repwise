@@ -1,14 +1,37 @@
 import { NextResponse } from "next/server";
+import { createClient } from "@/lib/supabase/server";
+import crypto from "crypto";
+
+function base64URLEncode(buffer: Buffer) {
+  return buffer.toString("base64").replace(/\+/g, "-").replace(/\//g, "_").replace(/=/g, "");
+}
+
+function sha256(buffer: string) {
+  return crypto.createHash("sha256").update(buffer).digest();
+}
 
 export async function GET() {
-  const clientId = process.env.HUBSPOT_CLIENT_ID!;
-  const redirectUri = `${process.env.NEXT_PUBLIC_APP_URL}/api/auth/hubspot/callback`;
-  const scopes = "crm.objects.deals.read crm.objects.contacts.read crm.objects.companies.read";
+  const supabase = createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return NextResponse.redirect(new URL("/login", process.env.NEXT_PUBLIC_APP_URL));
 
-  const url = new URL("https://app.hubspot.com/oauth/authorize");
-  url.searchParams.set("client_id", clientId);
-  url.searchParams.set("redirect_uri", redirectUri);
-  url.searchParams.set("scope", scopes);
+  const codeVerifier = base64URLEncode(crypto.randomBytes(32));
+  const codeChallenge = base64URLEncode(Buffer.from(sha256(codeVerifier)));
 
-  return NextResponse.redirect(url.toString());
+  const url = new URL("https://mcp-na2.hubspot.com/oauth/authorize/user");
+  url.searchParams.set("client_id", process.env.HUBSPOT_CLIENT_ID!);
+  url.searchParams.set("redirect_uri", `${process.env.NEXT_PUBLIC_APP_URL}/api/auth/hubspot/callback`);
+  url.searchParams.set("code_challenge", codeChallenge);
+  url.searchParams.set("code_challenge_method", "S256");
+  url.searchParams.set("state", user.id);
+
+  const response = NextResponse.redirect(url.toString());
+  response.cookies.set("hubspot_code_verifier", codeVerifier, {
+    httpOnly: true,
+    secure: true,
+    sameSite: "lax",
+    maxAge: 600,
+  });
+
+  return response;
 }
