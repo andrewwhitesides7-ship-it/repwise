@@ -182,7 +182,7 @@ export async function analyzeUpload(uploadId: string, fileContent: string) {
     const summary = buildSummary(rows);
 
     const message = await anthropic.messages.create({
-      model: "claude-sonnet-4-20250514",
+     model: "claude-sonnet-4-5",
       max_tokens: 2000,
       system: `You are RepWise, an AI sales analyst. Analyze this sales data and return ONLY a JSON array of 8 to 10 insight objects. Each object has: priority (critical or opportunity or pattern), category (a short 1-3 word label like "Time of Day" or "Rep Performance" or "Territory" or "Follow-Ups" or "Deal Value" or "Contact Rate"), title (under 10 words, specific and punchy), body (2 sentences with specific numbers from the data), metric (the key stat as a short string like "+3.2 closes/week" or "34% contact rate"). No preamble, no markdown, no code blocks, just the raw JSON array.`,
       messages: [
@@ -238,3 +238,4 @@ export async function analyzeUpload(uploadId: string, fileContent: string) {
 
   redirect("/dashboard");
 }
+
