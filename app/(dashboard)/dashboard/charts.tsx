@@ -17,12 +17,24 @@ interface SalesRecord {
   zip: string | null;
 }
 
-function CustomTooltip({ active, payload, label }: any) {
+interface TooltipPayload {
+  color: string;
+  name: string;
+  value: number;
+}
+
+interface TooltipProps {
+  active?: boolean;
+  payload?: TooltipPayload[];
+  label?: string;
+}
+
+function CustomTooltip({ active, payload, label }: TooltipProps) {
   if (!active || !payload?.length) return null;
   return (
     <div className="bg-gray-900 border border-gray-700 rounded-xl px-4 py-3 shadow-xl">
       <p className="text-gray-400 text-xs mb-1">{label}</p>
-      {payload.map((p: any, i: number) => (
+      {payload.map((p, i) => (
         <p key={i} className="text-sm font-semibold" style={{ color: p.color }}>
           {p.name}: {p.name === "Revenue" ? `$${Number(p.value).toLocaleString()}` : p.name === "Close Rate" ? `${p.value}%` : p.value}
         </p>
