@@ -283,9 +283,9 @@ export default function LandingPage() {
               <Link href="/signup" className="text-center bg-blue-600 hover:bg-blue-500 text-white font-semibold px-8 py-4 rounded-xl text-sm transition shadow-xl shadow-blue-500/20 hover:shadow-blue-500/30 hover:-translate-y-0.5 duration-200">
                 Analyze your deals free
               </Link>
-              <a href="#howitworks" className="text-center bg-gray-800/80 hover:bg-gray-700 border border-gray-700 text-white font-semibold px-8 py-4 rounded-xl text-sm transition hover:-translate-y-0.5 duration-200">
-                See how it works
-              </a>
+              <Link href="/demo" className="text-center bg-gray-800 hover:bg-gray-700 border border-gray-700 text-white font-semibold px-8 py-3.5 rounded-xl text-sm transition hover:-translate-y-0.5 duration-200">
+  See live demo
+</Link>
             </div>
 
             <div className="flex items-center gap-3">
@@ -736,9 +736,9 @@ export default function LandingPage() {
               <Link href="/signup" className="inline-block bg-blue-600 hover:bg-blue-500 text-white font-bold px-8 py-4 rounded-xl text-sm transition shadow-xl shadow-blue-500/20 hover:-translate-y-0.5 duration-200">
                 Start free analysis
               </Link>
-              <a href="#howitworks" className="inline-block bg-gray-800 hover:bg-gray-700 border border-gray-700 text-white font-semibold px-8 py-4 rounded-xl text-sm transition hover:-translate-y-0.5 duration-200">
-                See a live demo
-              </a>
+              <Link href="/demo" className="inline-block bg-gray-800 hover:bg-gray-700 border border-gray-700 text-white font-semibold px-8 py-4 rounded-xl text-sm transition hover:-translate-y-0.5 duration-200">
+  See live demo
+</Link>
             </div>
             <p className="text-gray-600 text-xs">No credit card required. 7-day free trial. Cancel anytime.</p>
           </div>
