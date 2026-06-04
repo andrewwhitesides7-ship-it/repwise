@@ -13,18 +13,15 @@ const communities = {
     { name: "r/smallbusiness", members: "800k", focus: "small business owners" },
     { name: "r/d2d", members: "12k", focus: "door-to-door sales specifically" },
     { name: "r/SaaS", members: "150k", focus: "SaaS products and tools" },
-    { name: "r/SolarEnergy", members: "200k", focus: "solar industry" },
   ],
   facebook: [
     { name: "Door to Door Sales Professionals", members: "45k", focus: "D2D sales community" },
     { name: "Solar Sales Professionals", members: "28k", focus: "solar sales reps" },
     { name: "Field Sales Network", members: "15k", focus: "field sales professionals" },
-    { name: "Sales Hacker Community", members: "80k", focus: "modern sales techniques" },
   ],
   slack: [
     { name: "RevGenius", members: "35k", focus: "revenue and sales professionals" },
     { name: "Sales Hacker", members: "20k", focus: "B2B sales community" },
-    { name: "Pavilion", members: "10k", focus: "go-to-market executives" },
   ],
 };
 
@@ -35,23 +32,39 @@ export async function generateSocialPosts() {
 
   const message = await anthropic.messages.create({
     model: "claude-sonnet-4-5",
-    max_tokens: 3000,
-    system: `You are a growth marketer for RepWise, an AI sales intelligence tool for field sales and door-to-door teams. Generate authentic, helpful social media posts for different communities. Posts should provide genuine value and naturally mention RepWise where appropriate. Never be spammy. Write like a real sales professional sharing a tool they actually use. Return ONLY a JSON array. Each post: { platform: "reddit"|"facebook"|"slack", community: string, title: string (for reddit only, null otherwise), body: string (the actual post content, 2-4 paragraphs max), angle: string (the value angle of this post) }`,
+    max_tokens: 4000,
+    system: `You are Andrew, a 20-something founder who just built RepWise after watching his dad's field sales team struggle with no data insights. You are posting in online communities to get your first users. Write like a real person — casual, excited, a little vulnerable, founder energy. Not a marketer. Not corporate. Real.
+
+Your voice:
+- Casual language, contractions, occasional imperfection
+- Share the real story of why you built it
+- Transparent about being early/small
+- Genuinely excited about what the product does
+- Soft CTAs like "try it free at tryrepwise.com" or "would love feedback"
+- Sometimes ask questions to spark conversation
+- Sound like you posted this at midnight because you are hyped
+
+RepWise in one line: you upload your sales CSV and AI tells you exactly where you are losing deals — which hours close best, which reps are burning doors, which ZIPs convert. Free to try at tryrepwise.com.
+
+Return ONLY a JSON array. No preamble, no markdown, just raw JSON. Each post object: { platform: "reddit"|"facebook"|"slack", community: string, title: string or null (reddit only), body: string, angle: string }`,
+
     messages: [{
       role: "user",
-      content: `Generate 6 social media posts for RepWise across these communities:
+      content: `Generate 6 social posts as Andrew the founder across these communities:
 
-REDDIT: ${communities.reddit.map(c => `${c.name} (${c.focus})`).join(", ")}
-FACEBOOK: ${communities.facebook.map(c => `${c.name} (${c.focus})`).join(", ")}
-SLACK: ${communities.slack.map(c => `${c.name} (${c.focus})`).join(", ")}
+REDDIT (2 posts): ${communities.reddit.map(c => c.name).join(", ")}
+FACEBOOK (2 posts): ${communities.facebook.map(c => c.name).join(", ")}
+SLACK (2 posts): ${communities.slack.map(c => c.name).join(", ")}
 
-RepWise value props:
-- Upload sales CSV and get 8-10 AI insights in 2 minutes
-- Find out which time of day closes best, which reps are burning doors, which ZIPs convert best
-- Used by field sales and door-to-door teams
-- Free to try at tryrepwise.com
+Mix these angles across the posts:
+1. Founder origin story — why you built RepWise (watching field sales reps have tons of data but zero insights)
+2. Soft launch energy — "just launched this, would love feedback from anyone in field sales"
+3. Sharing a specific insight the AI surfaced (e.g. "found out 3pm closes 3x better than morning")
+4. Asking the community a genuine question that leads to RepWise naturally
+5. Transparent startup founder sharing what they learned building for this market
+6. "Try it free" post with a specific value prop for that community
 
-Generate 2 Reddit posts, 2 Facebook posts, 2 Slack posts. Make them authentic and valuable.`,
+Make every post feel human. No buzzwords. No corporate language. Real founder voice.`,
     }],
   });
 
@@ -64,7 +77,7 @@ Generate 2 Reddit posts, 2 Facebook posts, 2 Slack posts. Make them authentic an
       user_id: user.id,
       platform: post.platform,
       community: post.community,
-      title: post.title,
+      title: post.title || null,
       body: post.body,
       status: "draft",
     });
