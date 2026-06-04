@@ -20,15 +20,39 @@ interface SocialPost {
 }
 
 const platformConfig = {
-  reddit: { icon: "🟠", color: "bg-orange-500/10 text-orange-400 border-orange-500/20", label: "Reddit" },
-  facebook: { icon: "🔵", color: "bg-blue-500/10 text-blue-400 border-blue-500/20", label: "Facebook" },
-  slack: { icon: "🟣", color: "bg-purple-500/10 text-purple-400 border-purple-500/20", label: "Slack" },
-  twitter: { icon: "⚫", color: "bg-gray-500/10 text-gray-400 border-gray-500/20", label: "Twitter" },
+  reddit: {
+    icon: "🟠",
+    color: "bg-orange-500/10 text-orange-400 border-orange-500/20",
+    label: "Reddit",
+    getPostUrl: (community: string) => `https://www.reddit.com/${community}/submit`,
+    getLinkUrl: (community: string) => `https://www.reddit.com/${community}`,
+  },
+  facebook: {
+    icon: "🔵",
+    color: "bg-blue-500/10 text-blue-400 border-blue-500/20",
+    label: "Facebook",
+    getPostUrl: (community: string) => `https://www.facebook.com/search/groups/?q=${encodeURIComponent(community)}`,
+    getLinkUrl: (community: string) => `https://www.facebook.com/search/groups/?q=${encodeURIComponent(community)}`,
+  },
+  slack: {
+    icon: "🟣",
+    color: "bg-purple-500/10 text-purple-400 border-purple-500/20",
+    label: "Slack",
+    getPostUrl: (_: string) => `https://slack.com`,
+    getLinkUrl: (_: string) => `https://slack.com`,
+  },
+  twitter: {
+    icon: "⚫",
+    color: "bg-gray-500/10 text-gray-400 border-gray-500/20",
+    label: "Twitter",
+    getPostUrl: (_: string) => `https://twitter.com/compose/tweet`,
+    getLinkUrl: (_: string) => `https://twitter.com`,
+  },
 };
 
 const statusConfig = {
   draft: { label: "Draft", color: "bg-yellow-500/10 text-yellow-400 border-yellow-500/20" },
-  approved: { label: "Approved", color: "bg-blue-500/10 text-blue-400 border-blue-500/20" },
+  approved: { label: "Ready to post", color: "bg-blue-500/10 text-blue-400 border-blue-500/20" },
   posted: { label: "Posted", color: "bg-emerald-500/10 text-emerald-400 border-emerald-500/20" },
   rejected: { label: "Rejected", color: "bg-red-500/10 text-red-400 border-red-500/20" },
 };
@@ -39,6 +63,7 @@ export default function SocialClient({ posts }: { posts: SocialPost[] }) {
   const [expanded, setExpanded] = useState<string | null>(null);
   const [postingId, setPostingId] = useState<string | null>(null);
   const [postUrl, setPostUrl] = useState("");
+  const [copied, setCopied] = useState<string | null>(null);
 
   async function handleGenerate() {
     setGenerating(true);
@@ -56,6 +81,17 @@ export default function SocialClient({ posts }: { posts: SocialPost[] }) {
     await markPosted(postId, postUrl);
     setPostingId(null);
     setPostUrl("");
+  }
+
+  function copyToClipboard(text: string, id: string) {
+    navigator.clipboard.writeText(text);
+    setCopied(id);
+    setTimeout(() => setCopied(null), 2000);
+  }
+
+  function getFullPostText(post: SocialPost) {
+    if (post.title) return `${post.title}\n\n${post.body}`;
+    return post.body;
   }
 
   const filtered = posts.filter(p => filter === "all" || p.status === filter);
@@ -76,7 +112,7 @@ export default function SocialClient({ posts }: { posts: SocialPost[] }) {
             Back to Admin
           </Link>
           <h1 className="text-2xl font-bold text-white mb-1">Social Posting</h1>
-          <p className="text-gray-400 text-sm">AI-generated posts for Reddit, Facebook, and Slack communities. Review and approve before posting.</p>
+          <p className="text-gray-400 text-sm">AI-generated founder posts. Copy and paste into communities in 30 seconds each.</p>
         </div>
         <button
           onClick={handleGenerate}
@@ -91,10 +127,28 @@ export default function SocialClient({ posts }: { posts: SocialPost[] }) {
               </svg>
               Generating...
             </>
-          ) : (
-            <>🤖 Generate new posts</>
-          )}
+          ) : "🤖 Generate new posts"}
         </button>
+      </div>
+
+      {/* How it works */}
+      <div className="bg-blue-500/5 border border-blue-500/20 rounded-2xl p-5 mb-6">
+        <h3 className="text-white font-semibold text-sm mb-3">How to post in 30 seconds</h3>
+        <div className="grid md:grid-cols-3 gap-4">
+          {[
+            { step: "1", title: "Approve the post", desc: "Review the AI-generated content and approve what looks good" },
+            { step: "2", title: "Copy + open community", desc: "Hit copy, then click the community link to open it in a new tab" },
+            { step: "3", title: "Paste and post", desc: "Paste the content, submit, then mark it as posted here" },
+          ].map(s => (
+            <div key={s.step} className="flex items-start gap-3">
+              <div className="w-6 h-6 bg-blue-600 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0">{s.step}</div>
+              <div>
+                <p className="text-white text-xs font-semibold">{s.title}</p>
+                <p className="text-gray-500 text-xs leading-relaxed">{s.desc}</p>
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
 
       {/* Stats */}
@@ -102,8 +156,8 @@ export default function SocialClient({ posts }: { posts: SocialPost[] }) {
         {[
           { label: "Total posts", value: counts.all, icon: "📝" },
           { label: "Pending review", value: counts.draft, icon: "⏳" },
+          { label: "Ready to post", value: counts.approved, icon: "👍" },
           { label: "Posted", value: counts.posted, icon: "✅" },
-          { label: "Approved", value: counts.approved, icon: "👍" },
         ].map(stat => (
           <div key={stat.label} className="bg-gray-900 border border-gray-800 rounded-2xl p-4">
             <div className="flex items-center justify-between mb-2">
@@ -133,7 +187,7 @@ export default function SocialClient({ posts }: { posts: SocialPost[] }) {
         <div className="bg-gray-900 border border-gray-800 border-dashed rounded-2xl p-16 text-center">
           <div className="text-5xl mb-4">🤖</div>
           <h3 className="text-white font-semibold text-lg mb-2">No posts yet</h3>
-          <p className="text-gray-400 text-sm mb-6">Generate AI-drafted posts for Reddit, Facebook, and Slack communities. Review and approve before posting.</p>
+          <p className="text-gray-400 text-sm mb-6">Generate AI-drafted founder posts for Reddit, Facebook, and Slack. Copy and paste in 30 seconds each.</p>
           <button onClick={handleGenerate} disabled={generating} className="bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white font-semibold px-6 py-3 rounded-xl text-sm transition">
             {generating ? "Generating..." : "Generate posts"}
           </button>
@@ -146,6 +200,7 @@ export default function SocialClient({ posts }: { posts: SocialPost[] }) {
           const platform = platformConfig[post.platform] || platformConfig.reddit;
           const status = statusConfig[post.status];
           const isExpanded = expanded === post.id;
+          const isCopied = copied === post.id;
 
           return (
             <div key={post.id} className={`bg-gray-900 border rounded-2xl overflow-hidden transition-all ${isExpanded ? "border-blue-500/30" : "border-gray-800 hover:border-gray-700"}`}>
@@ -173,19 +228,59 @@ export default function SocialClient({ posts }: { posts: SocialPost[] }) {
                 <div className="border-t border-gray-800 p-5 space-y-4">
                   {post.title && (
                     <div>
-                      <p className="text-xs text-gray-500 mb-1">Title</p>
-                      <p className="text-white text-sm font-medium bg-gray-800 rounded-xl px-4 py-3">{post.title}</p>
+                      <p className="text-xs text-gray-500 mb-1.5">Title</p>
+                      <div className="flex items-center gap-2">
+                        <p className="text-white text-sm font-medium bg-gray-800 rounded-xl px-4 py-3 flex-1">{post.title}</p>
+                        <button
+                          onClick={() => copyToClipboard(post.title!, `title-${post.id}`)}
+                          className={`flex-shrink-0 text-xs px-3 py-2 rounded-xl border transition ${copied === `title-${post.id}` ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20" : "bg-gray-800 text-gray-400 border-gray-700 hover:text-white"}`}
+                        >
+                          {copied === `title-${post.id}` ? "✓ Copied" : "Copy title"}
+                        </button>
+                      </div>
                     </div>
                   )}
+
                   <div>
-                    <p className="text-xs text-gray-500 mb-1">Post content</p>
+                    <p className="text-xs text-gray-500 mb-1.5">Post content</p>
                     <div className="text-gray-300 text-sm leading-relaxed bg-gray-800 rounded-xl px-4 py-3 whitespace-pre-line">{post.body}</div>
                   </div>
 
+                  {/* Action buttons */}
+                  <div className="grid grid-cols-2 gap-3">
+                    <button
+                      onClick={() => copyToClipboard(getFullPostText(post), post.id)}
+                      className={`flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-semibold border transition ${isCopied ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20" : "bg-gray-800 text-white border-gray-700 hover:bg-gray-700"}`}
+                    >
+                      {isCopied ? (
+                        <>
+                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
+                          Copied to clipboard
+                        </>
+                      ) : (
+                        <>
+                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
+                          Copy post
+                        </>
+                      )}
+                    </button>
+
+                    
+                      href={platform.getPostUrl(post.community)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-semibold bg-blue-600 hover:bg-blue-500 text-white transition"
+                    >
+                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
+                      Open {platform.label}
+                    </a>
+                  </div>
+
                   {post.url && (
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs text-gray-500">Posted at:</span>
-                      <a href={post.url} target="_blank" rel="noopener noreferrer" className="text-blue-400 text-xs hover:text-blue-300 transition">{post.url}</a>
+                    <div className="flex items-center gap-2 bg-emerald-500/5 border border-emerald-500/20 rounded-xl px-4 py-3">
+                      <svg className="w-4 h-4 text-emerald-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                      <span className="text-emerald-400 text-xs">Posted at: </span>
+                      <a href={post.url} target="_blank" rel="noopener noreferrer" className="text-blue-400 text-xs hover:text-blue-300 transition truncate">{post.url}</a>
                     </div>
                   )}
 
@@ -197,8 +292,9 @@ export default function SocialClient({ posts }: { posts: SocialPost[] }) {
                         onChange={e => setPostUrl(e.target.value)}
                         placeholder="Paste the URL of your post..."
                         className="flex-1 bg-gray-800 border border-gray-700 text-white placeholder-gray-500 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
+                        autoFocus
                       />
-                      <button onClick={() => handleMarkPosted(post.id)} className="bg-emerald-600 hover:bg-emerald-500 text-white font-semibold px-4 py-2.5 rounded-xl text-sm transition">
+                      <button onClick={() => handleMarkPosted(post.id)} className="bg-emerald-600 hover:bg-emerald-500 text-white font-semibold px-4 py-2.5 rounded-xl text-sm transition whitespace-nowrap">
                         Confirm
                       </button>
                       <button onClick={() => setPostingId(null)} className="text-gray-500 hover:text-gray-300 text-sm transition">Cancel</button>
@@ -216,7 +312,7 @@ export default function SocialClient({ posts }: { posts: SocialPost[] }) {
                         </button>
                       </>
                     )}
-                    {post.status === "approved" && (
+                    {post.status === "approved" && postingId !== post.id && (
                       <button onClick={() => setPostingId(post.id)} className="flex items-center gap-1.5 text-xs text-blue-400 bg-blue-500/10 border border-blue-500/20 hover:bg-blue-500/20 px-3 py-2 rounded-xl transition">
                         📤 Mark as posted
                       </button>
