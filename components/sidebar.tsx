@@ -80,7 +80,8 @@ const navLinks = [
 },
 ];
 
-export default function Sidebar() {
+export default function Sidebar({ email }: { email?: string }) {
+  const isAdmin = email === "andrewwhitesides7@gmail.com";
   const pathname = usePathname();
   const router = useRouter();
   const [signingOut, setSigningOut] = useState(false);
@@ -102,7 +103,15 @@ export default function Sidebar() {
       </div>
 
       <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
-        {navLinks.map((link) => {
+  {[...navLinks, ...(isAdmin ? [{
+    href: "/admin",
+    label: "Admin",
+    icon: (
+      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M9 3H5a2 2 0 00-2 2v4m6-6h10a2 2 0 012 2v4M9 3v18m0 0h10a2 2 0 002-2V9M9 21H5a2 2 0 01-2-2V9m0 0h18" />
+      </svg>
+    ),
+  }] : [])].map((link) => {
           const isActive = pathname === link.href || pathname.startsWith(link.href + "/");
           return (
             <Link

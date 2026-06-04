@@ -27,7 +27,7 @@ export default async function DashboardLayout({
 
   return (
     <div className="flex h-screen bg-gray-950 overflow-hidden">
-      <Sidebar />
+     <Sidebar email={user?.email || ""} />
       <div className="flex-1 flex flex-col overflow-hidden md:ml-0">
         <LimitBanner uploadCount={uploadCount} insightCount={insightCount} plan={plan} />
         <main className="flex-1 overflow-y-auto bg-gray-950 md:pt-0 pt-14">
