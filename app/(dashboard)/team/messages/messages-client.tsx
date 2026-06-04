@@ -58,7 +58,7 @@ export default function MessagesClient({
   }
 
   return (
-    <div className="p-6 max-w-3xl mx-auto">
+    <div className="p-4 md:p-6 max-w-3xl mx-auto">
       <div className="flex items-start justify-between mb-8">
         <div>
           <Link href="/team" className="flex items-center gap-1.5 text-gray-500 hover:text-gray-300 text-sm mb-3 transition">
@@ -67,7 +67,7 @@ export default function MessagesClient({
             </svg>
             Back to Team
           </Link>
-          <h1 className="text-2xl font-bold text-white mb-1">Team Messages</h1>
+          <h1 className="text-xl md:text-2xl font-bold text-white mb-1">Team Messages</h1>
           <p className="text-gray-400 text-sm">
             {isManager ? "Send announcements, coaching tips, and alerts to your team." : "Messages from your manager."}
           </p>
@@ -92,7 +92,7 @@ export default function MessagesClient({
           <form onSubmit={handleSend} className="space-y-4">
             <div>
               <label className="block text-xs font-medium text-gray-400 mb-2">Message type</label>
-              <div className="grid grid-cols-4 gap-2">
+              <div className="grid grid-cols-2 md:grid-cols-2 md:grid-cols-4 gap-2">
                 {(Object.keys(messageTypeConfig) as Array<keyof typeof messageTypeConfig>).map(type => {
                   const cfg = messageTypeConfig[type];
                   return (
@@ -214,3 +214,4 @@ export default function MessagesClient({
     </div>
   );
 }
+

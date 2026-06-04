@@ -84,10 +84,10 @@ export default function GoalsClient({ goals, hasData }: { goals: Goal[]; hasData
   }
 
   return (
-    <div className="p-8 max-w-5xl mx-auto">
+    <div className="p-4 md:p-8 max-w-5xl mx-auto">
       <div className="flex items-start justify-between mb-8">
         <div>
-          <h1 className="text-2xl font-bold text-white mb-1">Goals</h1>
+          <h1 className="text-xl md:text-2xl font-bold text-white mb-1">Goals</h1>
           <p className="text-gray-400 text-sm">Track progress, get AI-recommended goals, and stay focused on what moves the needle.</p>
         </div>
         <div className="flex items-center gap-3">
@@ -432,3 +432,4 @@ function GoalCard({
     </div>
   );
 }
+

@@ -21,3 +21,4 @@ export default async function GoalsPage() {
   return <GoalsClient goals={goals || []} hasData={(salesCount || 0) > 0} />;
 }
 
+

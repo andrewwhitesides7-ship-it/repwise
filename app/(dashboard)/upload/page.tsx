@@ -114,9 +114,9 @@ function UploadPageInner() {
   }
 
   return (
-    <div className="p-6 max-w-4xl mx-auto">
+    <div className="p-4 md:p-6 max-w-4xl mx-auto">
       <div className="mb-8">
-        <h1 className="text-2xl font-bold text-white mb-1">Upload Sales Data</h1>
+        <h1 className="text-xl md:text-2xl font-bold text-white mb-1">Upload Sales Data</h1>
         <p className="text-gray-400 text-sm">Upload a CSV or connect your CRM to get AI-powered insights in minutes.</p>
       </div>
 
@@ -267,7 +267,7 @@ function UploadPageInner() {
           </div>
           <span className="text-xs text-yellow-400 bg-yellow-500/10 border border-yellow-500/20 px-2.5 py-1 rounded-full">Coming soon</span>
         </div>
-        <div className="grid md:grid-cols-3 gap-3">
+        <div className="grid md:grid-cols-1 md:grid-cols-1 md:grid-cols-3 gap-3">
           {(Object.keys(crmConfig) as Provider[]).map(provider => {
             const crm = crmConfig[provider];
             const isConnected = connections[provider];
@@ -334,8 +334,9 @@ function RecentUploads() {
 
 export default function UploadPage() {
   return (
-    <Suspense fallback={<div className="p-8 text-gray-400 text-sm">Loading...</div>}>
+    <Suspense fallback={<div className="p-4 md:p-8 text-gray-400 text-sm">Loading...</div>}>
       <UploadPageInner />
     </Suspense>
   );
 }
+

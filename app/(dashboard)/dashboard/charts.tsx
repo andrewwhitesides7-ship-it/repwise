@@ -258,3 +258,4 @@ export function TopZipsChart({ records }: { records: SalesRecord[] }) {
     </div>
   );
 }
+

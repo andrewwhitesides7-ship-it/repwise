@@ -77,7 +77,7 @@ export default function TeamClient({
 
   if (!isManager) {
     return (
-      <div className="p-8 max-w-2xl mx-auto">
+      <div className="p-4 md:p-8 max-w-2xl mx-auto">
         <h1 className="text-2xl font-bold text-white mb-8">Team</h1>
         <div className="bg-gray-900 border border-gray-800 rounded-2xl p-12 text-center">
           <div className="text-4xl mb-4">👥</div>
@@ -89,9 +89,9 @@ export default function TeamClient({
   }
 
   return (
-    <div className="p-8 max-w-4xl mx-auto">
+    <div className="p-4 md:p-8 max-w-4xl mx-auto">
       <div className="mb-8">
-        <h1 className="text-2xl font-bold text-white mb-1">Team</h1>
+        <h1 className="text-xl md:text-2xl font-bold text-white mb-1">Team</h1>
         <p className="text-gray-400 text-sm">Manage your team, invite reps, and view their performance.</p>
       </div>
 
@@ -188,3 +188,4 @@ export default function TeamClient({
     </div>
   );
 }
+

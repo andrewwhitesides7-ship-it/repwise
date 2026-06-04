@@ -13,3 +13,4 @@ export default async function BillingPage() {
 
   return <BillingClient profile={profile} />;
 }
+

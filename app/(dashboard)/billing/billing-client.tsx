@@ -129,9 +129,9 @@ export default function BillingClient({
   }
 
   return (
-    <div className="p-8 max-w-6xl mx-auto">
+    <div className="p-4 md:p-8 max-w-6xl mx-auto">
       <div className="mb-8">
-        <h1 className="text-2xl font-bold text-white mb-1">Billing</h1>
+        <h1 className="text-xl md:text-2xl font-bold text-white mb-1">Billing</h1>
         <p className="text-gray-400 text-sm">Manage your subscription and billing details.</p>
       </div>
 
@@ -252,7 +252,7 @@ export default function BillingClient({
         {currentPlan === "free" ? "Choose a plan" : "Available plans"}
       </h2>
 
-      <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+      <div className="grid md:grid-cols-2 lg:grid-cols-2 md:grid-cols-2 md:grid-cols-4 gap-4 mb-8">
         {plans.map((plan) => {
           const isCurrentPlan = currentPlan === plan.id;
           return (
@@ -358,3 +358,4 @@ export default function BillingClient({
     </div>
   );
 }
+

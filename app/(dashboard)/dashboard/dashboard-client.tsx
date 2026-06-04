@@ -132,12 +132,12 @@ export default function DashboardClient({
 
   return (
     <div className="min-h-screen bg-gray-950">
-      <div className="max-w-6xl mx-auto px-6 py-8">
+      <div className="max-w-6xl mx-auto px-4 md:px-6 py-8">
 
         {/* Header */}
         <div className="flex items-start justify-between mb-8">
           <div>
-            <h1 className="text-2xl font-bold text-white mb-1">{greeting}, {firstName} 👋</h1>
+            <h1 className="text-xl md:text-2xl font-bold text-white mb-1">{greeting}, {firstName} 👋</h1>
             <p className="text-gray-500 text-sm">
               {activeInsights.length > 0
                 ? `${counts.critical} critical · ${counts.opportunity} opportunities · ${counts.pattern} patterns`
@@ -157,7 +157,7 @@ export default function DashboardClient({
 
         {/* Stats */}
         {stats && (
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-8">
+          <div className="grid grid-cols-2 md:grid-cols-2 md:grid-cols-2 md:grid-cols-4 gap-3 mb-8">
             {[
               { label: "Total Closes", value: stats.totalClosed.toLocaleString(), sub: `of ${stats.totalKnocked.toLocaleString()} doors`, icon: "🎯", color: "text-blue-400" },
               { label: "Close Rate", value: `${stats.closeRate}%`, sub: "knock to close", icon: "📈", color: "text-emerald-400" },
@@ -223,7 +223,7 @@ export default function DashboardClient({
 
         {/* Insights tab */}
         {activeTab === "insights" && (
-          <div className="grid lg:grid-cols-3 gap-6">
+          <div className="grid lg:grid-cols-1 md:grid-cols-1 md:grid-cols-3 gap-6">
 
             {/* Left — Insights */}
             <div className="lg:col-span-2">
@@ -422,3 +422,4 @@ export default function DashboardClient({
     </div>
   );
 }
+

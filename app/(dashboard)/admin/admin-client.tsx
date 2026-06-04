@@ -36,7 +36,7 @@ export default function AdminClient() {
 
   if (loading) {
     return (
-      <div className="p-8 flex items-center justify-center min-h-screen">
+      <div className="p-4 md:p-8 flex items-center justify-center min-h-screen">
         <div className="flex items-center gap-3 text-gray-400">
           <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24" fill="none">
             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
@@ -48,7 +48,7 @@ export default function AdminClient() {
     );
   }
 
-  if (!stats) return <div className="p-8 text-red-400">Failed to load admin data.</div>;
+  if (!stats) return <div className="p-4 md:p-8 text-red-400">Failed to load admin data.</div>;
 
   const totalPaid = (stats.users.planBreakdown.essential || 0) +
     (stats.users.planBreakdown.professional || 0) +
@@ -60,7 +60,7 @@ export default function AdminClient() {
     : "0";
 
   return (
-    <div className="p-6 max-w-6xl mx-auto">
+    <div className="p-4 md:p-6 max-w-6xl mx-auto">
       <div className="flex items-start justify-between mb-8">
         <div>
           <div className="flex items-center gap-2 mb-1">
@@ -75,7 +75,7 @@ export default function AdminClient() {
       </div>
 
       {/* Revenue stats */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+      <div className="grid grid-cols-2 md:grid-cols-2 md:grid-cols-2 md:grid-cols-4 gap-4 mb-6">
         {[
           { label: "Monthly Recurring Revenue", value: `$${stats.stripe.mrr.toLocaleString()}`, sub: "from active subscriptions", icon: "💰", color: "text-emerald-400" },
           { label: "Active Subscriptions", value: stats.stripe.activeSubscriptions.toString(), sub: "paying customers", icon: "💳", color: "text-blue-400" },
@@ -94,7 +94,7 @@ export default function AdminClient() {
       </div>
 
       {/* User stats */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+      <div className="grid grid-cols-2 md:grid-cols-2 md:grid-cols-2 md:grid-cols-4 gap-4 mb-6">
         {[
           { label: "Total Users", value: stats.users.total, sub: "all time signups", icon: "👥", color: "text-blue-400" },
           { label: "New This Month", value: stats.users.newThisMonth, sub: "last 30 days", icon: "✨", color: "text-emerald-400" },
@@ -173,3 +173,4 @@ export default function AdminClient() {
     </div>
   );
 }
+

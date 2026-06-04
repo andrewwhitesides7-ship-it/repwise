@@ -16,7 +16,7 @@ export default async function TeamMessagesPage() {
 
   if (!profile?.team_id) {
     return (
-      <div className="p-8 max-w-2xl mx-auto text-center">
+      <div className="p-4 md:p-8 max-w-2xl mx-auto text-center">
         <div className="text-5xl mb-4">💬</div>
         <h2 className="text-white font-bold text-xl mb-2">No team yet</h2>
         <p className="text-gray-400 text-sm mb-6">Create a team first to send messages to your reps.</p>
@@ -47,3 +47,4 @@ export default async function TeamMessagesPage() {
     />
   );
 }
+
