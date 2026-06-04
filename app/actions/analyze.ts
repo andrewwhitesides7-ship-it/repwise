@@ -139,10 +139,11 @@ export async function analyzeUpload(uploadId: string, fileContent: string) {
     .single();
 
   if (profile?.plan === "free") {
-    const { count: uploadCount } = await supabase
-      .from("uploads")
-      .select("*", { count: "exact", head: true })
-      .eq("user_id", user.id);
+  const { count: uploadCount } = await supabase
+    .from("uploads")
+    .select("*", { count: "exact", head: true })
+    .eq("user_id", user.id)
+    .eq("status", "complete");
 
     const { count: insightCount } = await supabase
       .from("insights")

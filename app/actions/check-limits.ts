@@ -20,7 +20,7 @@ export async function checkUserLimits() {
   }
 
   const [{ count: uploadCount }, { count: insightCount }] = await Promise.all([
-    supabase.from("uploads").select("*", { count: "exact", head: true }).eq("user_id", user.id),
+   supabase.from("uploads").select("*", { count: "exact", head: true }).eq("user_id", user.id).eq("status", "complete"),
     supabase.from("insights").select("*", { count: "exact", head: true }).eq("user_id", user.id),
   ]);
 

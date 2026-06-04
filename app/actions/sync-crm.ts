@@ -47,7 +47,17 @@ export async function syncCRM(provider: string) {
     .single();
 
   if (!connection) throw new Error("CRM not connected");
+if (profile?.plan === "free") {
+  const { count: uploadCount } = await supabase
+    .from("uploads")
+    .select("*", { count: "exact", head: true })
+    .eq("user_id", user.id)
+    .eq("status", "complete");
 
+  if ((uploadCount || 0) >= 1) {
+    redirect("/billing?limit=uploads");
+  }
+}
   let accessToken = connection.access_token;
 
   const isExpired = connection.expires_at && new Date(connection.expires_at) < new Date();
