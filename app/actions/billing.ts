@@ -48,6 +48,16 @@ export async function createCheckoutSession(plan: PlanId) {
     success_url: "https://tryrepwise.com/dashboard?upgraded=true",
     cancel_url: "https://tryrepwise.com/billing?canceled=true",
     allow_promotion_codes: true,
+    payment_method_collection: "always",
+    subscription_data: {
+      trial_period_days: 14,
+      trial_settings: {
+        end_behavior: {
+          missing_payment_method: "cancel",
+        },
+      },
+      metadata: { supabase_user_id: user.id, plan },
+    },
     metadata: { supabase_user_id: user.id, plan },
   });
 

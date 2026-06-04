@@ -26,7 +26,7 @@ export async function checkUserLimits() {
 
   return {
     canUpload: (uploadCount || 0) < 1,
-    canGetInsights: (insightCount || 0) < 3,
+    canGetInsights: true,
     plan,
     uploadCount: uploadCount || 0,
     insightCount: insightCount || 0,

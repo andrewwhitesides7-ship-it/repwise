@@ -149,11 +149,11 @@ export async function analyzeUpload(uploadId: string, fileContent: string) {
       .select("*", { count: "exact", head: true })
       .eq("user_id", user.id);
 
-    if ((uploadCount || 0) > 1) {
+    if ((uploadCount || 0) >= 1) {
       await supabase.from("uploads").update({ status: "failed", error_message: "Free limit reached" }).eq("id", uploadId);
       redirect("/billing?limit=uploads");
     }
-    if ((insightCount || 0) >= 3) {
+    if ((insightCount || 0) >= 10) {
       await supabase.from("uploads").update({ status: "failed", error_message: "Free limit reached" }).eq("id", uploadId);
       redirect("/billing?limit=insights");
     }
