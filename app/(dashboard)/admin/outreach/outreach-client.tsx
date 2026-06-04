@@ -1,0 +1,133 @@
+"use client";
+
+import { useState } from "react";
+import Link from "next/link";
+import { generateOutreachMessages } from "@/app/actions/social";
+
+interface OutreachMessage { platform: string; subject: string | null; body: string; tone: string; }
+
+const platforms = ["Instagram", "YouTube", "TikTok", "Facebook", "LinkedIn", "Twitter"];
+const niches = ["Door to door sales", "Solar sales", "Field sales", "Sales training", "Entrepreneur", "Real estate"];
+
+export default function OutreachClient() {
+  const [name, setName] = useState("");
+  const [platform, setPlatform] = useState("Instagram");
+  const [followers, setFollowers] = useState("");
+  const [niche, setNiche] = useState("Door to door sales");
+  const [generating, setGenerating] = useState(false);
+  const [messages, setMessages] = useState<OutreachMessage[]>([]);
+  const [copied, setCopied] = useState<string | null>(null);
+
+  async function handleGenerate(e: React.FormEvent) {
+    e.preventDefault();
+    setGenerating(true);
+    try {
+      const result = await generateOutreachMessages(name, platform, followers, niche);
+      setMessages(result);
+    } catch (err) { console.error(err); }
+    finally { setGenerating(false); }
+  }
+
+  function copyMessage(text: string, id: string) {
+    navigator.clipboard.writeText(text);
+    setCopied(id);
+    setTimeout(() => setCopied(null), 2000);
+  }
+
+  return (
+    <div className="p-4 md:p-8 max-w-4xl mx-auto">
+      <div className="flex items-start justify-between mb-8">
+        <div>
+          <Link href="/admin" className="flex items-center gap-1.5 text-gray-500 hover:text-gray-300 text-sm mb-3 transition">
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" /></svg>
+            Back to Admin
+          </Link>
+          <h1 className="text-2xl font-bold text-white mb-1">Influencer Outreach</h1>
+          <p className="text-gray-400 text-sm">Generate personalized DMs for D2D and field sales influencers.</p>
+        </div>
+      </div>
+
+      <div className="bg-blue-500/5 border border-blue-500/20 rounded-2xl p-5 mb-6">
+        <h3 className="text-white font-semibold text-sm mb-1">Affiliate offer for influencers</h3>
+        <p className="text-gray-400 text-xs">40% recurring commission forever as long as their referral stays subscribed.</p>
+      </div>
+
+      <div className="bg-gray-900 border border-gray-800 rounded-2xl p-6 mb-6">
+        <h2 className="text-white font-semibold mb-4">Influencer details</h2>
+        <form onSubmit={handleGenerate} className="space-y-4">
+          <div className="grid md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs font-medium text-gray-400 mb-1.5">Name</label>
+              <input type="text" required value={name} onChange={e => setName(e.target.value)} placeholder="e.g. Jake the Solar Guy" className="w-full bg-gray-800 border border-gray-700 text-white placeholder-gray-500 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition" />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-400 mb-1.5">Follower count</label>
+              <input type="text" required value={followers} onChange={e => setFollowers(e.target.value)} placeholder="e.g. 50,000" className="w-full bg-gray-800 border border-gray-700 text-white placeholder-gray-500 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition" />
+            </div>
+          </div>
+          <div className="grid md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs font-medium text-gray-400 mb-1.5">Platform</label>
+              <div className="grid grid-cols-3 gap-2">
+                {platforms.map(p => (
+                  <button key={p} type="button" onClick={() => setPlatform(p)} className={"px-3 py-2 rounded-xl text-xs font-medium border transition " + (platform === p ? "bg-blue-600/20 text-blue-400 border-blue-500/40" : "bg-gray-800 text-gray-400 border-gray-700 hover:border-gray-600")}>
+                    {p}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-400 mb-1.5">Niche</label>
+              <div className="grid grid-cols-2 gap-2">
+                {niches.map(n => (
+                  <button key={n} type="button" onClick={() => setNiche(n)} className={"px-3 py-2 rounded-xl text-xs font-medium border transition " + (niche === n ? "bg-blue-600/20 text-blue-400 border-blue-500/40" : "bg-gray-800 text-gray-400 border-gray-700 hover:border-gray-600")}>
+                    {n}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+          <button type="submit" disabled={generating} className="w-full flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white font-semibold px-6 py-3 rounded-xl text-sm transition">
+            {generating ? "Generating..." : "Generate outreach messages"}
+          </button>
+        </form>
+      </div>
+
+      {messages.length === 0 && (
+        <div className="bg-gray-900 border border-gray-800 border-dashed rounded-2xl p-12 text-center">
+          <div className="text-5xl mb-4">📨</div>
+          <h3 className="text-white font-semibold text-lg mb-2">No messages yet</h3>
+          <p className="text-gray-400 text-sm">Fill in the influencer details above and generate personalized outreach messages.</p>
+        </div>
+      )}
+
+      {messages.length > 0 && (
+        <div className="space-y-4">
+          <h2 className="text-white font-semibold">Generated messages for {name}</h2>
+          {messages.map((msg, i) => (
+            <div key={i} className="bg-gray-900 border border-gray-800 rounded-2xl p-5">
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-medium text-blue-400 bg-blue-500/10 border border-blue-500/20 px-2.5 py-1 rounded-full">{msg.tone}</span>
+                  <span className="text-xs text-gray-500 bg-gray-800 px-2.5 py-1 rounded-full">{platform}</span>
+                </div>
+                <button onClick={() => copyMessage(msg.body, String(i))} className={"text-xs font-semibold px-3 py-1.5 rounded-lg border transition " + (copied === String(i) ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20" : "bg-gray-800 text-gray-400 border-gray-700 hover:text-white")}>
+                  {copied === String(i) ? "Copied!" : "Copy"}
+                </button>
+              </div>
+              {msg.subject && <p className="text-gray-500 text-xs mb-2">Subject: <span className="text-gray-300">{msg.subject}</span></p>}
+              <p className="text-gray-300 text-sm leading-relaxed whitespace-pre-line">{msg.body}</p>
+            </div>
+          ))}
+          <div className="bg-gray-900 border border-gray-800 rounded-2xl p-5">
+            <h3 className="text-white font-semibold text-sm mb-3">Create affiliate link for {name}</h3>
+            <p className="text-gray-400 text-xs mb-3">After they agree go to the Affiliates page and create a link with 40% commission.</p>
+            <Link href="/admin/affiliates" className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-500 text-white font-semibold px-4 py-2.5 rounded-xl text-sm transition">
+              Go to Affiliates
+            </Link>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}

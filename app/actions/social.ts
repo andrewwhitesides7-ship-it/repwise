@@ -113,3 +113,33 @@ export async function deletePost(postId: string) {
   await supabase.from("social_posts").delete().eq("id", postId);
   revalidatePath("/admin/social");
 }
+export async function generateOutreachMessages(influencerName: string, platform: string, followerCount: string, niche: string) {
+  const supabase = createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error("Not authenticated");
+
+  const message = await anthropic.messages.create({
+    model: "claude-sonnet-4-5",
+    max_tokens: 2000,
+    system: `You are Andrew, founder of RepWise. Write authentic cold outreach DMs to D2D and field sales influencers proposing an affiliate partnership. Sound like a real founder — excited, direct, not corporate. Offer 40% commission. Return ONLY a JSON array of 3 message variants. Each: { platform: string, subject: string or null, body: string, tone: string }`,
+    messages: [{
+      role: "user",
+      content: `Write 3 outreach message variants to ${influencerName}, a ${niche} influencer with ${followerCount} followers on ${platform}.
+
+RepWise: AI tool that analyzes field sales CSV data and gives 8-10 insights in 2 minutes. Tells reps which hours close best, which ZIPs convert, which reps are burning doors. Free at tryrepwise.com.
+
+Affiliate offer: 40% recurring commission. So if they send us someone on the $99 plan they earn $39.60/month forever as long as that person stays subscribed.
+
+Write 3 variants:
+1. Short and punchy - 3 sentences max
+2. Value-first - lead with what RepWise does for their audience  
+3. Numbers-focused - lead with the commission opportunity
+
+Make them sound like a real founder DM not a template.`,
+    }],
+  });
+
+  const raw = message.content[0].type === "text" ? message.content[0].text : "[]";
+  const cleaned = raw.replace(/```json|```/g, "").trim();
+  return JSON.parse(cleaned);
+}
