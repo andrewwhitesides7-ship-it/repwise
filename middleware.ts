@@ -37,11 +37,34 @@ export async function middleware(request: NextRequest) {
       return NextResponse.redirect(url);
     }
 
-    if (user && (pathname === "/login" || pathname === "/signup")) {
-      const url = request.nextUrl.clone();
-      url.pathname = "/dashboard";
-      return NextResponse.redirect(url);
+if (user && (pathname === "/login" || pathname === "/signup")) {
+  const url = request.nextUrl.clone();
+  url.pathname = "/dashboard";
+  return NextResponse.redirect(url);
+}
+
+if (user && pathname === "/dashboard") {
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll() { return request.cookies.getAll(); },
+        setAll(cookiesToSet) {
+          cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value));
+          supabaseResponse = NextResponse.next({ request });
+          cookiesToSet.forEach(({ name, value, options }) => supabaseResponse.cookies.set(name, value, options));
+        },
+      },
     }
+  );
+  const { data: profile } = await supabase.from("users").select("onboarded").eq("id", user.id).single();
+  if (!profile?.onboarded) {
+    const url = request.nextUrl.clone();
+    url.pathname = "/onboarding";
+    return NextResponse.redirect(url);
+  }
+}
   } catch (e) {
     console.error("Middleware error:", e);
   }
