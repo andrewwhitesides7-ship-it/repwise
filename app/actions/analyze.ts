@@ -5,9 +5,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import Papa from "papaparse";
 import { redirect } from "next/navigation";
 
-const anthropic = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY!,
-});
+const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY! });
 
 function buildSummary(rows: Record<string, string>[]): string {
   if (!rows.length) return "No data found.";
@@ -131,14 +129,37 @@ ${topZips}
 
 export async function analyzeUpload(uploadId: string, fileContent: string) {
   const supabase = createClient();
-
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error("Not authenticated");
 
-  await supabase
-    .from("uploads")
-    .update({ status: "processing" })
-    .eq("id", uploadId);
+  const { data: profile } = await supabase
+    .from("users")
+    .select("plan, business_type, main_challenge, team_size")
+    .eq("id", user.id)
+    .single();
+
+  if (profile?.plan === "free") {
+    const { count: uploadCount } = await supabase
+      .from("uploads")
+      .select("*", { count: "exact", head: true })
+      .eq("user_id", user.id);
+
+    const { count: insightCount } = await supabase
+      .from("insights")
+      .select("*", { count: "exact", head: true })
+      .eq("user_id", user.id);
+
+    if ((uploadCount || 0) > 1) {
+      await supabase.from("uploads").update({ status: "failed", error_message: "Free limit reached" }).eq("id", uploadId);
+      redirect("/billing?limit=uploads");
+    }
+    if ((insightCount || 0) >= 3) {
+      await supabase.from("uploads").update({ status: "failed", error_message: "Free limit reached" }).eq("id", uploadId);
+      redirect("/billing?limit=insights");
+    }
+  }
+
+  await supabase.from("uploads").update({ status: "processing" }).eq("id", uploadId);
 
   try {
     const parsed = Papa.parse<Record<string, string>>(fileContent, {
@@ -150,10 +171,7 @@ export async function analyzeUpload(uploadId: string, fileContent: string) {
     const rows = parsed.data;
     const rowCount = rows.length;
 
-    await supabase
-      .from("uploads")
-      .update({ row_count: rowCount })
-      .eq("id", uploadId);
+    await supabase.from("uploads").update({ row_count: rowCount }).eq("id", uploadId);
 
     const salesRecords = rows.map(r => ({
       upload_id: uploadId,
@@ -181,39 +199,40 @@ export async function analyzeUpload(uploadId: string, fileContent: string) {
 
     const summary = buildSummary(rows);
 
+    const businessType = profile?.business_type || "field sales";
+    const mainChallenge = profile?.main_challenge || "improving close rates";
+    const teamSize = profile?.team_size || "unknown";
+
+    const businessContext = profile?.business_type
+      ? `BUSINESS CONTEXT: This is a ${businessType} sales team with ${teamSize} reps. Their main challenge is ${mainChallenge}. Tailor your insights specifically for this type of business.`
+      : "";
+
     const message = await anthropic.messages.create({
-     model: "claude-sonnet-4-5",
+      model: "claude-sonnet-4-5",
       max_tokens: 2000,
-      system: `You are RepWise, an AI sales analyst. Analyze this sales data and return ONLY a JSON array of 8 to 10 insight objects. Each object has: priority (critical or opportunity or pattern), category (a short 1-3 word label like "Time of Day" or "Rep Performance" or "Territory" or "Follow-Ups" or "Deal Value" or "Contact Rate"), title (under 10 words, specific and punchy), body (2 sentences with specific numbers from the data), metric (the key stat as a short string like "+3.2 closes/week" or "34% contact rate"). No preamble, no markdown, no code blocks, just the raw JSON array.`,
-      messages: [
-        {
-          role: "user",
-          content: `Analyze this sales data and return 8-10 insights as a JSON array:\n\n${summary}`,
-        },
-      ],
+      system: `You are RepWise, an AI sales analyst for field sales and door-to-door teams. ${businessContext} Analyze the sales data and return ONLY a JSON array of 8 to 10 insight objects. Each object has: priority (critical or opportunity or pattern), category (a short 1-3 word label like "Time of Day" or "Rep Performance" or "Territory" or "Follow-Ups" or "Deal Value" or "Contact Rate"), title (under 10 words, specific and punchy), body (2 sentences with specific numbers from the data), metric (the key stat as a short string like "+3.2 closes/week" or "34% contact rate"). No preamble, no markdown, no code blocks, just the raw JSON array.`,
+      messages: [{
+        role: "user",
+        content: `Analyze this sales data and return 8-10 insights as a JSON array:\n\n${summary}`,
+      }],
     });
 
     const raw = message.content[0].type === "text" ? message.content[0].text : "";
 
-    let insights: Array<{
-      priority: string;
-      category: string;
-      title: string;
-      body: string;
-      metric: string;
-    }> = [];
-
+    let insights: Array<{ priority: string; category: string; title: string; body: string; metric: string }> = [];
     try {
       const cleaned = raw.replace(/```json|```/g, "").trim();
       insights = JSON.parse(cleaned);
     } catch {
       throw new Error("Failed to parse AI response as JSON");
     }
-await supabase
-  .from("insights")
-  .update({ is_dismissed: true })
-  .eq("user_id", user.id)
-  .neq("upload_id", uploadId);
+
+    await supabase
+      .from("insights")
+      .update({ is_dismissed: true })
+      .eq("user_id", user.id)
+      .neq("upload_id", uploadId);
+
     const insightRows = insights.map(insight => ({
       upload_id: uploadId,
       user_id: user.id,
@@ -226,48 +245,12 @@ await supabase
     }));
 
     await supabase.from("insights").insert(insightRows);
-const { data: profile } = await supabase
-    .from("users")
-    .select("plan")
-    .eq("id", user.id)
-    .single();
-
-if (profile?.plan === "free") {
-  const { count: uploadCount } = await supabase
-    .from("uploads")
-    .select("*", { count: "exact", head: true })
-    .eq("user_id", user.id);
-
-  const { count: insightCount } = await supabase
-    .from("insights")
-    .select("*", { count: "exact", head: true })
-    .eq("user_id", user.id);
-
-  if ((uploadCount || 0) > 1) {
-    await supabase.from("uploads").update({ status: "failed", error_message: "Free limit reached" }).eq("id", uploadId);
-    redirect("/billing?limit=uploads");
-  }
-  if ((insightCount || 0) >= 3) {
-    await supabase.from("uploads").update({ status: "failed", error_message: "Free limit reached" }).eq("id", uploadId);
-    redirect("/billing?limit=insights");
-  }
-}
-
-
-
-    await supabase
-      .from("uploads")
-      .update({ status: "complete", row_count: rowCount })
-      .eq("id", uploadId);
+    await supabase.from("uploads").update({ status: "complete", row_count: rowCount }).eq("id", uploadId);
 
   } catch (err) {
-    await supabase
-      .from("uploads")
-      .update({ status: "failed", error_message: String(err) })
-      .eq("id", uploadId);
+    await supabase.from("uploads").update({ status: "failed", error_message: String(err) }).eq("id", uploadId);
     throw err;
   }
 
   redirect("/dashboard");
 }
-
