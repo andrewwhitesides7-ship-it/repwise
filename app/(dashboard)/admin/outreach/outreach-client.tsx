@@ -111,9 +111,41 @@ export default function OutreachClient() {
                   <span className="text-xs font-medium text-blue-400 bg-blue-500/10 border border-blue-500/20 px-2.5 py-1 rounded-full">{msg.tone}</span>
                   <span className="text-xs text-gray-500 bg-gray-800 px-2.5 py-1 rounded-full">{platform}</span>
                 </div>
-                <button onClick={() => copyMessage(msg.body, String(i))} className={"text-xs font-semibold px-3 py-1.5 rounded-lg border transition " + (copied === String(i) ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20" : "bg-gray-800 text-gray-400 border-gray-700 hover:text-white")}>
-                  {copied === String(i) ? "Copied!" : "Copy"}
-                </button>
+               <div className="flex items-center gap-2">
+  <button onClick={() => copyMessage(msg.body, String(i))} className={"text-xs font-semibold px-3 py-1.5 rounded-lg border transition " + (copied === String(i) ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20" : "bg-gray-800 text-gray-400 border-gray-700 hover:text-white")}>
+    {copied === String(i) ? "Copied!" : "Copy"}
+  </button>
+  {platform === "Instagram" && (
+    <a href="https://instagram.com/direct/inbox" target="_blank" rel="noopener noreferrer" className="text-xs font-semibold px-3 py-1.5 rounded-lg border bg-pink-500/10 text-pink-400 border-pink-500/20 hover:bg-pink-500/20 transition">
+      Open Instagram
+    </a>
+  )}
+  {platform === "YouTube" && (
+    <a href="https://youtube.com" target="_blank" rel="noopener noreferrer" className="text-xs font-semibold px-3 py-1.5 rounded-lg border bg-red-500/10 text-red-400 border-red-500/20 hover:bg-red-500/20 transition">
+      Open YouTube
+    </a>
+  )}
+  {platform === "TikTok" && (
+    <a href="https://tiktok.com/messages" target="_blank" rel="noopener noreferrer" className="text-xs font-semibold px-3 py-1.5 rounded-lg border bg-gray-500/10 text-gray-400 border-gray-500/20 hover:bg-gray-500/20 transition">
+      Open TikTok
+    </a>
+  )}
+  {platform === "Facebook" && (
+    <a href="https://facebook.com/messages" target="_blank" rel="noopener noreferrer" className="text-xs font-semibold px-3 py-1.5 rounded-lg border bg-blue-500/10 text-blue-400 border-blue-500/20 hover:bg-blue-500/20 transition">
+      Open Facebook
+    </a>
+  )}
+  {platform === "LinkedIn" && (
+    <a href="https://linkedin.com/messaging" target="_blank" rel="noopener noreferrer" className="text-xs font-semibold px-3 py-1.5 rounded-lg border bg-blue-500/10 text-blue-400 border-blue-500/20 hover:bg-blue-500/20 transition">
+      Open LinkedIn
+    </a>
+  )}
+  {platform === "Twitter" && (
+    <a href="https://twitter.com/messages" target="_blank" rel="noopener noreferrer" className="text-xs font-semibold px-3 py-1.5 rounded-lg border bg-gray-500/10 text-gray-400 border-gray-500/20 hover:bg-gray-500/20 transition">
+      Open Twitter
+    </a>
+  )}
+</div>
               </div>
               {msg.subject && <p className="text-gray-500 text-xs mb-2">Subject: <span className="text-gray-300">{msg.subject}</span></p>}
               <p className="text-gray-300 text-sm leading-relaxed whitespace-pre-line">{msg.body}</p>
