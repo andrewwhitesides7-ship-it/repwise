@@ -59,11 +59,11 @@ if (user && pathname === "/dashboard") {
     }
   );
   const { data: profile } = await supabase.from("users").select("onboarded").eq("id", user.id).single();
-  if (!profile?.onboarded) {
-    const url = request.nextUrl.clone();
-    url.pathname = "/onboarding";
-    return NextResponse.redirect(url);
-  }
+  if (user && !user.user_metadata?.onboarded && pathname.startsWith("/dashboard")) {
+  const url = request.nextUrl.clone();
+  url.pathname = "/onboarding";
+  return NextResponse.redirect(url);
+}
 }
   } catch (e) {
     console.error("Middleware error:", e);
