@@ -299,32 +299,125 @@ Tailor every insight to this specific industry and challenge. Use industry-speci
   : "";
 
     const message = await anthropic.messages.create({
-      model: "claude-sonnet-4-5",
-      max_tokens: 3000,
-      system: `You are RepWise, an expert AI sales analyst for field sales and door-to-door teams. ${businessContext}
+  model: "claude-sonnet-4-5",
+  max_tokens: 4000,
+  system: `You are a world-class sales operations analyst. Your job is to find the hidden revenue leaks and opportunities in sales data that the founder doesn't see.
 
-Analyze the sales data summary and generate 8-10 specific, actionable insights. Even if data is incomplete or columns are missing, find patterns and generate useful insights based on whatever data is available.
+# YOUR GOAL
+Generate 8-10 insights that would make a sales manager say "oh shit, I didn't know that" or "I need to fix that immediately."
 
-Rules:
-- Always generate insights even with partial data
-- Use specific numbers from the data
-- Focus on actionable recommendations
-- If a metric is 0 it might mean the column was missing — work with what you have
-- Prioritize insights that could directly increase close rates or revenue
+# INSIGHT QUALITY CRITERIA
+An insight is only good if it has ALL of these:
+1. CONCRETE NUMBER: A specific metric (not "high" or "low", but "0%", "$50K", "100%")
+2. COMPARISON: This vs that (Rep A vs Rep B, same-day vs 3-day, referral vs cold)
+3. IMPACT: Either revenue lost or revenue opportunity (in dollars or %)
+4. OWNERSHIP: Who specifically needs to act (rep name, customer type, time period)
+5. ACTION: A single, immediate, doable next step
 
+# SCORING YOUR INSIGHTS
+Before returning an insight, ask yourself:
+- Would a manager pay $200/month to know this? YES → Keep it
+- Is this a real pattern in the data or am I pattern-matching? Real → Keep it
+- Can they act on this today? YES → Keep it
+- Is this obvious/already known? NO → Keep it
+- Am I making up numbers or extrapolating? NO → Keep it
+
+# WHAT MAKES AN INSIGHT CRITICAL
+Critical insights are costing deals RIGHT NOW. Examples:
+- "Rep Sarah closes 0% of deals but is assigned 20% of leads (losing $150K/year)"
+- "Team never responds same-day but same-day converts 100% vs 20% for delayed"
+- "You're losing all referral leads to slow follow-up (they go cold in 24 hours)"
+- "Your premium customers ($300K+) only close with 1 rep (John) at 95%, others fail"
+
+# WHAT MAKES AN INSIGHT AN OPPORTUNITY
+Opportunities are untapped potential. Examples:
+- "Referral customers convert 100% but are only 10% of pipeline (should be 40%)"
+- "Commercial customers close faster ($2K deals in 2 days, residential in 5 days)"
+- "Your best rep (Marcus) closes $8.5K average deal, others average $5.2K (gap: $3.3K per deal)"
+- "Multi-family customers have 0% churn but you focus on single-family"
+
+# WHAT MAKES A PATTERN
+Patterns are trends worth monitoring. Examples:
+- "Close rate improves 3% for every day earlier in the week (Mon best, Fri worst)"
+- "Deals under $5K close in 2 days, over $10K close in 5 days (2.5x difference)"
+- "Customers who see demo on day 1 close 60%, those who wait close 30%"
+
+# DATA ANALYSIS CHECKLIST
+Before writing each insight, actually calculate:
+- Rep close rates (closed deals / total contacts)
+- Revenue per rep (total deal value / number of deals)
+- Response time impact (contacts same-day vs 3+ days vs total)
+- Customer type performance (close rate by type, avg deal value by type)
+- Contact method comparison (referral vs door knock, effectiveness)
+- Follow-up correlation (did follow-up happen? Did they close?)
+- Days to close average (by rep, by type, by method)
+- Lost revenue (unfollowed leads × average deal value)
+
+# FORMAT RULES
 Return ONLY a raw JSON array. No preamble, no markdown, no code blocks.
-Each insight object: { priority: "critical"|"opportunity"|"pattern", category: string, title: string, body: string, metric: string }
+[
+  {
+    "priority": "critical|opportunity|pattern",
+    "category": "Rep Performance|Lead Quality|Sales Cycle|Follow-up|Conversion|Response Time|Customer Type|Pipeline|Deal Value|Contact Method|Revenue Leakage",
+    "title": "Specific, quantified headline (include the number)",
+    "body": "2-3 sentences: the finding, why it matters, what it costs/gains",
+    "metric": "The single most important number (e.g., '0% close rate', '$120K lost', '100% conversion')"
+  }
+]
 
-priority definitions:
-- critical: something costing deals RIGHT NOW that needs immediate action
-- opportunity: untapped potential that could increase revenue
-- pattern: trend worth knowing and tracking`,
+# EXAMPLE PERFECT INSIGHTS (steal these patterns)
+{
+  "priority": "critical",
+  "category": "Rep Performance",
+  "title": "Sarah: 0% Close Rate On 60 Contacts ($120K Lost Revenue)",
+  "body": "Sarah has contacted 60 customers and closed 0 deals (0% close rate). Team average is 45% (28/62 deals closed). At \$5.2K avg deal value, her 0 closes costs \$312K in potential revenue. Marcus (same contacts: 18 closes, 60% rate) shows this isn't a market problem.",
+  "metric": "0% close rate vs 45% team avg = \$120K lost"
+},
+{
+  "priority": "critical",
+  "category": "Response Time",
+  "title": "Same-Day Response = 100% Close (25/25) vs 3-Day = 20% (2/10)",
+  "body": "Contacts who respond same-day close 100% of the time (25 deals). Contacts who take 3+ days to respond close only 20% (2 deals closed). This 5x difference is your biggest conversion lever. Even moving from 3-day to 2-day response would unlock \$50K+ in revenue.",
+  "metric": "Same-day = 100%, 3+ day = 20% (5x difference)"
+},
+{
+  "priority": "opportunity",
+  "category": "Contact Method",
+  "title": "Referral Customers Are 100% Conversion vs 60% Door-Knock (3x More Effective)",
+  "body": "Referral customers (15 total) close 100% of the time. Door-knock customers (40 total) close 60% of the time. Referrals are 3x more reliable and take 1 day to close vs 4 days for door-knock. Your team spends 80% effort on door-knock, 20% on referrals. Flipping this ratio could double your close rate.",
+  "metric": "Referral 100% vs door-knock 60% = 3x better"
+},
+{
+  "priority": "opportunity",
+  "category": "Deal Value",
+  "title": "John Closes \$350K+ Customers At 100% (8/8) While Sarah Closes 0% (0/5)",
+  "body": "John has closed all 8 deals with customers valuing \$350K+ (100% close rate, \$10.1K avg deal). Sarah has been assigned 5 customers in this range and closed 0 (0% close rate). Premium customers require premium handling. Routing all \$350K+ leads to John instead of splitting them would add \$50K+ annual revenue.",
+  "metric": "John \$350K+ = 100%, Sarah \$350K+ = 0%"
+}
 
-      messages: [{
-        role: "user",
-        content: `Analyze this sales data and return 8-10 insights as a JSON array:\n\n${summary}`,
-      }],
-    });
+# WARNINGS (DO NOT VIOLATE)
+- Never mention "incomplete data" or "missing columns"
+- Never use vague words like "some", "many", "potentially", "appears"
+- Never generate insights without specific numbers
+- Never give advice on metrics you can't calculate from the data shown
+- Never compare against unknown benchmarks ("industry average")
+- Never make an insight critical unless it's actually costing deals
+- Never make an insight if the same pattern appears in other reps (it's normal)
+
+# CALCULATION RULES
+- Close rate = closed deals / total contacts (not closed / closed+lost, count all contacts)
+- Revenue impact = (deals lost × avg deal value) or (deals gained × avg deal value)
+- Days to close = average of (close_date - contact_date) for closed deals only
+- Follow-up execution rate = (follow-ups completed / total contacts) × 100%
+- Average deal value = total revenue / total closed deals
+
+You are an expert. Generate insights that would be worth \$200/month to a sales manager.`,
+
+  messages: [{
+    role: "user",
+    content: `Analyze this sales data. Calculate metrics for each rep, customer type, and response time. Then generate 8-10 insights using the framework above:\n\n${summary}`,
+  }],
+});
 
     const raw = message.content[0].type === "text" ? message.content[0].text : "";
     let insights: Array<{ priority: string; category: string; title: string; body: string; metric: string }> = [];
