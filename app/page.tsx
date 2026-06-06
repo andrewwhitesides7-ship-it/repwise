@@ -156,8 +156,15 @@ export default function LandingPage() {
                   I was making gut decisions on $500,000 worth of deals every quarter. I figured there had to be a better way.
                 </p>
                 <p className="text-white font-medium">
-                  So I built RepWise — the tool I wish I had when I was in the field.
-                </p>
+  So I built RepWise — the tool I wish I had when I was in the field.
+</p>
+<p>
+  I built this entirely by myself. No team, no funding, no agency. Just me figuring it out because I genuinely believe field sales teams deserve better tools than what exists today.
+</p>
+<p>
+  If you try it and think of a feature that would make your life easier — email me directly at <a href="mailto:andrew@tryrepwise.com" className="text-blue-400 hover:text-blue-300 transition underline">andrew@tryrepwise.com</a>. I read every email and I will build it for you.
+</p>
+
               </div>
             </div>
           </div>
