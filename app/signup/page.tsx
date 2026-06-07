@@ -1,9 +1,17 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
+
+const floatingInsights = [
+  { priority: "critical", title: "Marcus: 1 close per 54 doors", metric: "+$18K/mo" },
+  { priority: "opportunity", title: "2–4pm closes 3x better than morning", metric: "+3/week" },
+  { priority: "pattern", title: "ZIP 78704 converting at 34%", metric: "3x avg" },
+  { priority: "critical", title: "12 warm leads never followed up", metric: "$28K lost" },
+  { priority: "opportunity", title: "Sara closes 34% above team avg", metric: "$23,400" },
+];
 
 export default function SignupPage() {
   const router = useRouter();
@@ -14,6 +22,24 @@ export default function SignupPage() {
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
   const [error, setError] = useState("");
+  const [insightIdx, setInsightIdx] = useState(0);
+  const [strength, setStrength] = useState(0);
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setInsightIdx(i => (i + 1) % floatingInsights.length);
+    }, 2500);
+    return () => clearInterval(timer);
+  }, []);
+
+  useEffect(() => {
+    let s = 0;
+    if (password.length >= 8) s++;
+    if (/[A-Z]/.test(password)) s++;
+    if (/[0-9]/.test(password)) s++;
+    if (/[^A-Za-z0-9]/.test(password)) s++;
+    setStrength(s);
+  }, [password]);
 
   async function handleSignup(e: React.FormEvent) {
     e.preventDefault();
@@ -71,9 +97,18 @@ export default function SignupPage() {
     });
   }
 
+  const priorityStyles: Record<string, string> = {
+    critical: "bg-red-500/10 text-red-400 border-red-500/20",
+    opportunity: "bg-emerald-500/10 text-emerald-400 border-emerald-500/20",
+    pattern: "bg-blue-500/10 text-blue-400 border-blue-500/20",
+  };
+
+  const strengthColors = ["", "bg-red-500", "bg-yellow-500", "bg-blue-500", "bg-emerald-500"];
+  const strengthLabels = ["", "Weak", "Fair", "Good", "Strong"];
+
   const benefits = [
     { icon: "⏱️", text: "First insights in under 2 minutes" },
-    { icon: "📊", text: "8-10 specific insights per upload" },
+    { icon: "📊", text: "8–10 specific insights per upload" },
     { icon: "🎯", text: "Know exactly which reps need coaching" },
     { icon: "🗺️", text: "Find your highest converting territories" },
     { icon: "💰", text: "30-day money-back guarantee" },
@@ -81,86 +116,129 @@ export default function SignupPage() {
   ];
 
   return (
-    <div className="min-h-screen bg-gray-950 flex">
+    <div className="min-h-screen bg-[#080810] text-white flex overflow-hidden">
+
+      {/* Ambient background */}
+      <div className="fixed inset-0 pointer-events-none overflow-hidden">
+        <div className="absolute top-[-10%] left-[-10%] w-[500px] h-[500px] bg-blue-600/8 rounded-full blur-[120px]" />
+        <div className="absolute bottom-[10%] right-[-10%] w-[400px] h-[400px] bg-indigo-600/6 rounded-full blur-[100px]" />
+        <div
+          className="absolute inset-0 opacity-[0.012]"
+          style={{
+            backgroundImage: "radial-gradient(circle, #ffffff 1px, transparent 1px)",
+            backgroundSize: "32px 32px",
+          }}
+        />
+      </div>
 
       {/* Left panel */}
-      <div className="hidden lg:flex lg:w-1/2 flex-col justify-between p-12 bg-gradient-to-br from-gray-900 via-gray-950 to-gray-900 border-r border-gray-800 relative overflow-hidden">
-        <div className="absolute inset-0 overflow-hidden">
-          <div className="absolute top-20 left-20 w-72 h-72 bg-blue-600/5 rounded-full blur-3xl" />
-          <div className="absolute bottom-20 right-10 w-96 h-96 bg-indigo-600/5 rounded-full blur-3xl" />
-        </div>
-
-        <div className="relative">
-          <Link href="/" className="text-2xl font-bold text-white">
-            Try<span className="text-blue-500">RepWise</span>
+      <div className="hidden lg:flex lg:w-1/2 flex-col justify-between p-12 relative">
+        <div className="relative z-10">
+          <Link href="/" className="text-2xl font-black text-white">
+            Try<span className="text-blue-400">RepWise</span>
           </Link>
         </div>
 
-        <div className="relative">
+        <div className="relative z-10 flex-1 flex flex-col justify-center">
           <div className="mb-8">
-            <div className="inline-flex items-center gap-2 bg-blue-500/10 border border-blue-500/20 text-blue-400 text-xs font-medium px-3 py-1.5 rounded-full mb-4">
+            <div className="inline-flex items-center gap-2 bg-blue-500/8 border border-blue-500/15 text-blue-400 text-xs font-semibold px-3 py-1.5 rounded-full mb-6">
+              <span className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-pulse" />
               Free to start — no card required
             </div>
-            <h2 className="text-4xl font-bold text-white leading-tight mb-4">
-              Stop guessing.<br />Start knowing.
+            <h2 className="text-5xl font-black text-white leading-[0.95] tracking-tight mb-4">
+              Stop guessing.<br />
+              <span className="bg-gradient-to-r from-blue-400 to-indigo-300 bg-clip-text text-transparent">
+                Start knowing.
+              </span>
             </h2>
-            <p className="text-gray-400 text-lg leading-relaxed">
+            <p className="text-gray-500 text-lg leading-relaxed max-w-sm">
               Upload your sales data and find out exactly where your team is losing deals. In under 2 minutes.
             </p>
           </div>
 
-          <div className="space-y-3 mb-8">
+          {/* Animated insight preview */}
+          <div className="relative mb-8">
+            <div className="absolute -inset-1 bg-gradient-to-r from-blue-600/15 to-indigo-600/10 rounded-2xl blur-xl" />
+            <div className="relative bg-gray-900/70 border border-white/8 rounded-2xl p-4 backdrop-blur-xl">
+              <div className="flex items-center gap-2 mb-3">
+                <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                <span className="text-gray-600 text-xs font-medium">Live insight preview</span>
+              </div>
+              <div className="space-y-2">
+                {floatingInsights.map((insight, i) => (
+                  <div
+                    key={i}
+                    className={`flex items-center gap-3 rounded-xl border px-3 py-2.5 transition-all duration-500 ${
+                      i === insightIdx
+                        ? "border-blue-500/25 bg-blue-500/5"
+                        : "border-white/3 bg-white/1 opacity-30"
+                    }`}
+                  >
+                    <span className={`text-xs font-semibold px-2 py-0.5 rounded-full border flex-shrink-0 ${priorityStyles[insight.priority]}`}>
+                      {insight.priority}
+                    </span>
+                    <p className={`text-xs font-medium flex-1 transition-colors duration-500 ${i === insightIdx ? "text-white" : "text-gray-500"}`}>
+                      {insight.title}
+                    </p>
+                    <span className="text-blue-400 text-xs font-bold flex-shrink-0">{insight.metric}</span>
+                  </div>
+                ))}
+              </div>
+              <div className="flex items-center justify-center gap-1.5 mt-3">
+                {floatingInsights.map((_, i) => (
+                  <div
+                    key={i}
+                    className={`rounded-full transition-all duration-300 ${i === insightIdx ? "w-4 h-1.5 bg-blue-400" : "w-1.5 h-1.5 bg-gray-700"}`}
+                  />
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-2">
             {benefits.map((b, i) => (
-              <div key={i} className="flex items-center gap-3">
-                <span className="text-lg">{b.icon}</span>
-                <span className="text-gray-300 text-sm">{b.text}</span>
+              <div key={i} className="flex items-center gap-2.5 bg-white/3 border border-white/5 rounded-xl px-3 py-2.5">
+                <span className="text-base">{b.icon}</span>
+                <span className="text-gray-400 text-xs leading-tight">{b.text}</span>
               </div>
             ))}
           </div>
+        </div>
 
-          <div className="bg-gray-900/80 border border-gray-800 rounded-2xl p-5">
-            <p className="text-gray-300 text-sm leading-relaxed italic mb-3">
+        <div className="relative z-10">
+          <div className="bg-white/3 border border-white/6 rounded-2xl p-5">
+            <p className="text-gray-400 text-sm leading-relaxed italic mb-3">
               "I built this after years in field sales with no way to see what was actually working. I wish I had it back then."
             </p>
             <div>
-              <p className="text-white text-sm font-semibold">Andrew Whitesides</p>
-              <p className="text-gray-500 text-xs">Founder, RepWise</p>
+              <p className="text-white text-sm font-bold">Andrew Whitesides</p>
+              <p className="text-gray-600 text-xs">Founder, RepWise</p>
             </div>
           </div>
-        </div>
-
-        <div className="relative grid grid-cols-3 gap-4">
-          {[
-            { value: "2 min", label: "Analysis time" },
-            { value: "8-10", label: "Insights per upload" },
-            { value: "30 day", label: "Money-back guarantee" },
-          ].map(stat => (
-            <div key={stat.label} className="text-center">
-              <div className="text-2xl font-bold text-blue-400">{stat.value}</div>
-              <div className="text-gray-500 text-xs">{stat.label}</div>
-            </div>
-          ))}
         </div>
       </div>
 
       {/* Right panel */}
-      <div className="flex-1 flex flex-col items-center justify-center px-6 py-12">
+      <div className="flex-1 flex flex-col items-center justify-center px-6 py-12 relative z-10">
         <div className="w-full max-w-md">
+
+          {/* Mobile logo */}
           <div className="lg:hidden text-center mb-8">
-            <Link href="/" className="text-2xl font-bold text-white">
-              Try<span className="text-blue-500">RepWise</span>
+            <Link href="/" className="text-2xl font-black text-white">
+              Try<span className="text-blue-400">RepWise</span>
             </Link>
           </div>
 
           <div className="mb-8">
-            <h1 className="text-3xl font-bold text-white mb-2">Create your account</h1>
-            <p className="text-gray-400">Free to start. No credit card required.</p>
+            <h1 className="text-3xl font-black text-white mb-2">Create your account</h1>
+            <p className="text-gray-500">Free to start. No credit card required.</p>
           </div>
 
+          {/* Google */}
           <button
             onClick={handleGoogle}
             disabled={googleLoading}
-            className="w-full flex items-center justify-center gap-3 bg-gray-900 hover:bg-gray-800 border border-gray-700 text-white font-semibold px-6 py-3.5 rounded-xl text-sm transition mb-6"
+            className="w-full flex items-center justify-center gap-3 bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/20 text-white font-bold px-6 py-3.5 rounded-2xl text-sm transition-all duration-200 mb-6 hover:-translate-y-0.5"
           >
             {googleLoading ? (
               <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none">
@@ -180,40 +258,40 @@ export default function SignupPage() {
 
           <div className="relative mb-6">
             <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-gray-800" />
+              <div className="w-full border-t border-white/6" />
             </div>
             <div className="relative flex justify-center">
-              <span className="bg-gray-950 px-4 text-xs text-gray-600">or sign up with email</span>
+              <span className="bg-[#080810] px-4 text-xs text-gray-700">or sign up with email</span>
             </div>
           </div>
 
           <form onSubmit={handleSignup} className="space-y-4">
             <div>
-              <label className="block text-xs font-medium text-gray-400 mb-1.5">Full name</label>
+              <label className="block text-xs font-semibold text-gray-500 mb-1.5">Full name</label>
               <input
                 type="text"
                 required
                 value={fullName}
                 onChange={e => setFullName(e.target.value)}
                 placeholder="Jake Morrison"
-                className="w-full bg-gray-900 border border-gray-800 text-white placeholder-gray-600 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
+                className="w-full bg-white/4 border border-white/8 hover:border-white/15 focus:border-blue-500/50 text-white placeholder-gray-700 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-all duration-200"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-medium text-gray-400 mb-1.5">Email</label>
+              <label className="block text-xs font-semibold text-gray-500 mb-1.5">Email</label>
               <input
                 type="email"
                 required
                 value={email}
                 onChange={e => setEmail(e.target.value)}
                 placeholder="jake@company.com"
-                className="w-full bg-gray-900 border border-gray-800 text-white placeholder-gray-600 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
+                className="w-full bg-white/4 border border-white/8 hover:border-white/15 focus:border-blue-500/50 text-white placeholder-gray-700 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-all duration-200"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-medium text-gray-400 mb-1.5">Password</label>
+              <label className="block text-xs font-semibold text-gray-500 mb-1.5">Password</label>
               <div className="relative">
                 <input
                   type={showPassword ? "text" : "password"}
@@ -221,12 +299,12 @@ export default function SignupPage() {
                   value={password}
                   onChange={e => setPassword(e.target.value)}
                   placeholder="At least 8 characters"
-                  className="w-full bg-gray-900 border border-gray-800 text-white placeholder-gray-600 rounded-xl px-4 py-3 pr-12 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
+                  className="w-full bg-white/4 border border-white/8 hover:border-white/15 focus:border-blue-500/50 text-white placeholder-gray-700 rounded-xl px-4 py-3 pr-12 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-all duration-200"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300 transition"
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-600 hover:text-gray-300 transition-colors duration-200"
                 >
                   {showPassword ? (
                     <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -240,10 +318,27 @@ export default function SignupPage() {
                   )}
                 </button>
               </div>
+              {password.length > 0 && (
+                <div className="mt-2">
+                  <div className="flex gap-1 mb-1">
+                    {[1, 2, 3, 4].map(i => (
+                      <div
+                        key={i}
+                        className={`h-1 flex-1 rounded-full transition-all duration-300 ${i <= strength ? strengthColors[strength] : "bg-white/8"}`}
+                      />
+                    ))}
+                  </div>
+                  {strength > 0 && (
+                    <p className={`text-xs font-medium ${strength <= 1 ? "text-red-400" : strength === 2 ? "text-yellow-400" : strength === 3 ? "text-blue-400" : "text-emerald-400"}`}>
+                      {strengthLabels[strength]} password
+                    </p>
+                  )}
+                </div>
+              )}
             </div>
 
             {error && (
-              <div className="bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3">
+              <div className="bg-red-500/8 border border-red-500/20 rounded-xl px-4 py-3">
                 <p className="text-red-400 text-sm">{error}</p>
               </div>
             )}
@@ -251,30 +346,33 @@ export default function SignupPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white font-semibold px-6 py-3.5 rounded-xl text-sm transition shadow-lg shadow-blue-500/20 flex items-center justify-center gap-2"
+              className="group relative w-full overflow-hidden bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white font-black px-6 py-3.5 rounded-2xl text-sm transition-all duration-300 shadow-xl shadow-blue-600/25 hover:shadow-blue-500/35 hover:-translate-y-0.5 flex items-center justify-center gap-2"
             >
-              {loading ? (
-                <>
-                  <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
-                  </svg>
-                  Creating account...
-                </>
-              ) : "Create free account"}
+              <span className="absolute inset-0 bg-gradient-to-r from-blue-500 to-indigo-500 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+              <span className="relative z-10 flex items-center gap-2">
+                {loading ? (
+                  <>
+                    <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
+                    </svg>
+                    Creating account...
+                  </>
+                ) : "Create free account →"}
+              </span>
             </button>
           </form>
 
-          <p className="text-center text-gray-500 text-xs mt-4 leading-relaxed">
+          <p className="text-center text-gray-700 text-xs mt-4 leading-relaxed">
             By signing up you agree to our{" "}
-            <Link href="/terms" className="text-gray-400 hover:text-white transition">Terms</Link>
+            <Link href="/terms" className="text-gray-500 hover:text-white transition-colors duration-200">Terms</Link>
             {" "}and{" "}
-            <Link href="/privacy" className="text-gray-400 hover:text-white transition">Privacy Policy</Link>.
+            <Link href="/privacy" className="text-gray-500 hover:text-white transition-colors duration-200">Privacy Policy</Link>.
           </p>
 
-          <p className="text-center text-gray-500 text-sm mt-6">
+          <p className="text-center text-gray-600 text-sm mt-5">
             Already have an account?{" "}
-            <Link href="/login" className="text-blue-400 hover:text-blue-300 font-medium transition">
+            <Link href="/login" className="text-blue-400 hover:text-blue-300 font-bold transition-colors duration-200">
               Sign in
             </Link>
           </p>
