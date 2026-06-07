@@ -473,9 +473,7 @@ if (!Array.isArray(insights) || insights.length === 0) {
   }];
 }
 
-    if (!Array.isArray(insights) || insights.length === 0) {
-      throw new Error("No valid insights generated");
-    }
+  
 
     await supabase
       .from("insights")
