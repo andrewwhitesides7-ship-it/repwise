@@ -438,28 +438,26 @@ You are an expert. Generate insights that would be worth $200/month to a sales m
     });
 
     const responseText = message.content[0]?.type === "text" ? message.content[0].text : "";
-    if (!responseText) throw new Error("No response from AI");
 
-    let insights: Array<{ priority: string; category: string; title: string; body: string; metric: string }> = [];
+let insights: Array<{ priority: string; category: string; title: string; body: string; metric: string }> = [];
 
-    try {
-  const cleaned = responseText.replace(/```json|```/g, "").trim();
-  insights = JSON.parse(cleaned);
-} catch {
+if (responseText) {
   try {
-    const jsonMatch = responseText.match(/\[\s*\{[\s\S]*?\}\s*\]/);
-    if (jsonMatch) {
-      insights = JSON.parse(jsonMatch[0]);
-    } else {
-      const objectMatches = responseText.match(/\{[^{}]*"priority"[^{}]*\}/g);
-      if (objectMatches && objectMatches.length > 0) {
-        insights = objectMatches
-          .map(m => { try { return JSON.parse(m); } catch { return null; } })
-          .filter(Boolean);
-      }
+    const cleaned = responseText.replace(/```json|```/g, "").trim();
+    const parsed = JSON.parse(cleaned);
+    if (Array.isArray(parsed) && parsed.length > 0) {
+      insights = parsed;
     }
   } catch {
-    console.error("All JSON parsing attempts failed. Raw response:", responseText);
+    try {
+      const match = responseText.match(/\[\s*\{[\s\S]*\}\s*\]/);
+      if (match) {
+        const parsed = JSON.parse(match[0]);
+        if (Array.isArray(parsed)) insights = parsed;
+      }
+    } catch {
+      console.error("JSON parse failed, using fallback insight");
+    }
   }
 }
 
@@ -467,9 +465,9 @@ if (!Array.isArray(insights) || insights.length === 0) {
   insights = [{
     priority: "pattern",
     category: "Data Analysis",
-    title: "Upload processed — review your data quality",
-    body: "Your data was uploaded successfully but the AI could not generate structured insights. This usually happens with very small datasets or unusual data formats. Try uploading a CSV with at least 20 rows and columns like rep_name, closed, knocked, and date.",
-    metric: "Check data format",
+    title: "Data uploaded successfully — refine your CSV format",
+    body: "Your data was saved but structured insights could not be generated. This usually means your CSV has fewer than 10 rows or unusual column names. Try adding rep_name, knocked, closed, and date columns and upload again.",
+    metric: "Check CSV format",
   }];
 }
 
@@ -501,11 +499,8 @@ if (!Array.isArray(insights) || insights.length === 0) {
  } catch (err) {
   const errMsg = String(err);
   if (errMsg.includes("NEXT_REDIRECT")) throw err;
-  await supabase
-    .from("uploads")
-    .update({ status: "failed", error_message: errMsg })
-    .eq("id", uploadId);
-  console.error("Upload analysis error:", err);
+  await supabase.from("uploads").update({ status: "failed", error_message: errMsg }).eq("id", uploadId);
+  console.error("Upload error:", err);
 }
 
   redirect("/dashboard");

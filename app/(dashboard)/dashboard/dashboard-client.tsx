@@ -161,7 +161,7 @@ export default function DashboardClient({ insights, goals, stats, userName, reco
         <div className={"flex items-start justify-between mb-8 transition-all duration-700 " + (mounted ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4")}>
           <div>
             <h1 className="text-2xl md:text-3xl font-black text-white mb-1 flex items-center gap-2">
-              {greeting}, {userName.split(" ")[0]} <span>{greetingEmoji}</span>
+              {greeting}, {(userName || "there").split(" ")[0]} <span>{greetingEmoji}</span>
             </h1>
             <div className="flex items-center gap-4 text-xs text-gray-600">
               {counts.critical > 0 && (
