@@ -443,16 +443,35 @@ You are an expert. Generate insights that would be worth $200/month to a sales m
     let insights: Array<{ priority: string; category: string; title: string; body: string; metric: string }> = [];
 
     try {
-      const cleaned = responseText.replace(/```json|```/g, "").trim();
-      insights = JSON.parse(cleaned);
-    } catch {
-      const jsonMatch = responseText.match(/\[\s*\{[\s\S]*?\}\s*\]/);
-      if (jsonMatch) {
-        insights = JSON.parse(jsonMatch[0]);
-      } else {
-        throw new Error("Failed to parse AI response as JSON");
+  const cleaned = responseText.replace(/```json|```/g, "").trim();
+  insights = JSON.parse(cleaned);
+} catch {
+  try {
+    const jsonMatch = responseText.match(/\[\s*\{[\s\S]*?\}\s*\]/);
+    if (jsonMatch) {
+      insights = JSON.parse(jsonMatch[0]);
+    } else {
+      const objectMatches = responseText.match(/\{[^{}]*"priority"[^{}]*\}/g);
+      if (objectMatches && objectMatches.length > 0) {
+        insights = objectMatches
+          .map(m => { try { return JSON.parse(m); } catch { return null; } })
+          .filter(Boolean);
       }
     }
+  } catch {
+    console.error("All JSON parsing attempts failed. Raw response:", responseText);
+  }
+}
+
+if (!Array.isArray(insights) || insights.length === 0) {
+  insights = [{
+    priority: "pattern",
+    category: "Data Analysis",
+    title: "Upload processed — review your data quality",
+    body: "Your data was uploaded successfully but the AI could not generate structured insights. This usually happens with very small datasets or unusual data formats. Try uploading a CSV with at least 20 rows and columns like rep_name, closed, knocked, and date.",
+    metric: "Check data format",
+  }];
+}
 
     if (!Array.isArray(insights) || insights.length === 0) {
       throw new Error("No valid insights generated");
