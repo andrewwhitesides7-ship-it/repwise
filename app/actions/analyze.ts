@@ -498,10 +498,15 @@ if (!Array.isArray(insights) || insights.length === 0) {
     await supabase.from("insights").insert(insightRows);
     await supabase.from("uploads").update({ status: "complete", row_count: rowCount }).eq("id", uploadId);
 
-  } catch (err) {
-    await supabase.from("uploads").update({ status: "failed", error_message: String(err) }).eq("id", uploadId);
-    throw err;
-  }
+ } catch (err) {
+  const errMsg = String(err);
+  if (errMsg.includes("NEXT_REDIRECT")) throw err;
+  await supabase
+    .from("uploads")
+    .update({ status: "failed", error_message: errMsg })
+    .eq("id", uploadId);
+  console.error("Upload analysis error:", err);
+}
 
   redirect("/dashboard");
 }
