@@ -7,7 +7,7 @@ export async function sendWelcomeEmail(email: string, name: string) {
     await resend.emails.send({
       from: "Andrew at RepWise <andrew@tryrepwise.com>",
       to: email,
-      subject: "You just made my day — welcome to RepWise",
+      subject: "You just made my day — your first upload is ready",
       html: `
 <!DOCTYPE html>
 <html>
