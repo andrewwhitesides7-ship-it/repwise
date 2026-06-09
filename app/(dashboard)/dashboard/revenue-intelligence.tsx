@@ -24,7 +24,6 @@ function formatMoney(n: number): string {
 
 function useCountUp(target: number, duration = 1500) {
   const [count, setCount] = useState(0);
-  const prevTargetRef = useRef(target);
 
   useEffect(() => {
     setCount(0);
@@ -59,9 +58,10 @@ export default function RevenueIntelligence({ records }: { records: SalesRecord[
   const [activeGoals, setActiveGoals] = useState<Record<string, boolean>>({});
   const [expanded, setExpanded] = useState(false);
 
-  if (!records.length) return null;
+  // Safeguard against empty data arrays
+  if (!records || !records.length) return null;
 
-  // 1. Calculate Core Totals from Dataset
+  // 1. Calculate Aggregated Raw Totals from Dataset
   const totalKnocked = records.reduce((s, r) => s + (r.knocked || 0), 0) || records.length;
   const totalClosed = records.reduce((s, r) => s + (r.closed || 0), 0);
   const totalRevenue = records.reduce((s, r) => s + (r.deal_value || 0), 0);
@@ -69,10 +69,30 @@ export default function RevenueIntelligence({ records }: { records: SalesRecord[
   const closeRate = totalKnocked > 0 ? totalClosed / totalKnocked : 0;
   const avgDeal = totalClosed > 0 ? totalRevenue / totalClosed : 8500;
 
-  // Assuming dataset covers a standard 1-month sales period
-  const monthlyRevenueBaseline = totalRevenue;
+  // 2. --- TIME NORMALIZATION ENGINE ---
+  // Safely find the span of days inside the data to calculate an accurate monthly baseline
+  const validDates = records
+    .map(r => (r.date ? new Date(r.date).getTime() : null))
+    .filter((time): time is number => time !== null && !isNaN(time));
 
-  // 2. Build Rep Performance Mapping
+  let monthsInDataset = 1; // Fallback to 1 standard operational month
+
+  if (validDates.length > 1) {
+    const minDate = Math.min(...validDates);
+    const maxDate = Math.max(...validDates);
+    const diffTime = Math.abs(maxDate - minDate);
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    
+    // Convert total lifespan days into operational calendar months (avg 30.4 days/mo)
+    // Minimum boundary set to 0.5 months to prevent radical division spikes on tiny tests
+    monthsInDataset = Math.max(0.5, diffDays / 30.4);
+  }
+
+  // Derive stable monthly baselines across accumulated volume
+  const monthlyRevenueBaseline = totalRevenue / monthsInDataset;
+  const monthlyKnockedBaseline = totalKnocked / monthsInDataset;
+
+  // 3. Build Rep Performance Mapping
   const repMap: Record<string, { knocked: number; closed: number; revenue: number }> = {};
   records.forEach(r => {
     const rep = r.rep_name || "Unknown";
@@ -85,9 +105,9 @@ export default function RevenueIntelligence({ records }: { records: SalesRecord[
   const reps = Object.entries(repMap)
     .map(([name, data]) => ({
       name,
-      knocked: data.knocked,
-      closed: data.closed,
-      revenue: data.revenue,
+      knocked: data.knocked / monthsInDataset, // Normalize per month
+      closed: data.closed / monthsInDataset,   // Normalize per month
+      revenue: data.revenue / monthsInDataset, // Normalize per month
       closeRate: data.knocked > 0 ? data.closed / data.knocked : 0,
     }))
     .sort((a, b) => b.closeRate - a.closeRate);
@@ -95,7 +115,7 @@ export default function RevenueIntelligence({ records }: { records: SalesRecord[
   const topRep = reps[0];
   const bottomReps = reps.filter(r => r.closeRate < closeRate * 0.85);
 
-  // 3. Build Territory Mapping
+  // 4. Build Territory Mapping
   const zipMap: Record<string, { knocked: number; closed: number }> = {};
   records.forEach(r => {
     if (!r.zip) return;
@@ -105,14 +125,19 @@ export default function RevenueIntelligence({ records }: { records: SalesRecord[
   });
 
   const territories = Object.entries(zipMap)
-    .map(([zip, data]) => ({ zip, ...data, closeRate: data.knocked > 0 ? data.closed / data.knocked : 0 }))
+    .map(([zip, data]) => ({
+      zip,
+      knocked: data.knocked / monthsInDataset,
+      closed: data.closed / monthsInDataset,
+      closeRate: data.knocked > 0 ? data.closed / data.knocked : 0
+    }))
     .sort((a, b) => b.closeRate - a.closeRate);
 
   const topTerritory = territories[0];
   const bottomTerritories = territories.filter(t => t.closeRate < closeRate * 0.5);
-  const wastedKnocks = bottomTerritories.reduce((s, t) => s + t.knocked, 0);
+  const wastedKnocksMonthly = bottomTerritories.reduce((s, t) => s + t.knocked, 0);
 
-  // 4. Calculate True Incremental Monthly Impacts (Clean Linear Values)
+  // 5. Calculate Linear Non-Compounded Quick Win Impacts (Per Single Month Scale)
   const recoveryGoals = [
     {
       id: "coach_bottom",
@@ -124,34 +149,34 @@ export default function RevenueIntelligence({ records }: { records: SalesRecord[
     {
       id: "shift_time",
       label: "Shift all knocking to peak hours",
-      impact: monthlyRevenueBaseline * 0.08, // Linear realistic 8% uplift on baseline
-      description: "Optimizing schedules avoids burning premium residential door opportunities",
+      impact: monthlyRevenueBaseline * 0.08, // Conservative, realistic linear 8% lift on monthly baseline
+      description: "Optimizing field calendars prevents burning premium residential open door opportunities",
       action: "Block 2-4pm daily as protected knocking time for every rep",
     },
     {
       id: "followup",
       label: "Recover all unfollowed warm leads",
-      impact: avgDeal * Math.max(1, Math.round(totalKnocked * 0.03)), // Expecting a standard conservative 3% lifecycle recovery
-      description: "Est. " + Math.round(totalKnocked * 0.05) + " warm leads left without active multi-day touchpoints",
+      impact: avgDeal * Math.max(1, Math.round(monthlyKnockedBaseline * 0.03)), // Expect a safe 3% lead recovery rate on a monthly scale
+      description: "Estimated " + Math.round(monthlyKnockedBaseline * 0.05) + " warm leads left without systematic multi-day touchpoints",
       action: "Call every lead from last 30 days who showed interest but never closed",
     },
     {
       id: "territory",
       label: "Stop knocking low-converting territories",
-      impact: wastedKnocks * closeRate * avgDeal * 0.3, 
-      description: wastedKnocks > 0 ? wastedKnocks + " knocks wasted on territories below 50% of team average" : "Territory distribution looks solid",
-      action: topTerritory ? "Shift all knocks from bottom ZIPs to " + topTerritory.zip + " (" + (topTerritory.closeRate * 100).toFixed(0) + "% close rate)" : null,
+      impact: wastedKnocksMonthly * closeRate * avgDeal * 0.3,
+      description: wastedKnocksMonthly > 0 ? Math.round(wastedKnocksMonthly) + " monthly knocks wasted on low-yielding neighborhoods" : "Territory metrics are balanced",
+      action: topTerritory ? "Shift field assignments from bottom ZIPs directly to " + topTerritory.zip + " (" + (topTerritory.closeRate * 100).toFixed(0) + "% close rate)" : null,
     },
     {
       id: "replicate_top",
       label: "Replicate top rep approach team-wide",
-      impact: topRep ? Math.max(0, (topRep.closeRate - closeRate)) * totalKnocked * avgDeal * 0.15 : 0, // 15% team efficiency capture
-      description: topRep ? topRep.name + " closes at " + (topRep.closeRate * 100).toFixed(0) + "% vs " + (closeRate * 100).toFixed(0) + "% team average" : "Rep data not available",
-      action: topRep ? "Have " + topRep.name + " run a 30-min team call explaining exactly what they say at the door" : null,
+      impact: topRep ? Math.max(0, (topRep.closeRate - closeRate)) * monthlyKnockedBaseline * avgDeal * 0.12 : 0, // 12% team strategy efficiency capture
+      description: topRep ? topRep.name + " closes doors at " + (topRep.closeRate * 100).toFixed(0) + "% vs " + (closeRate * 100).toFixed(0) + "% team average" : "Rep history unavailable",
+      action: topRep ? "Have " + topRep.name + " run a 30-min team briefing breaking down their door opener script" : null,
     },
-  ].filter(g => g.impact > 100);
+  ].filter(g => g.impact > 50);
 
-  // 5. Compute Consolidated 6-Month Horizons
+  // 6. Compute Consolidated 6-Month Projection Curves
   const activeImpactMonthly = recoveryGoals.reduce((s, g) => s + (activeGoals[g.id] ? g.impact : 0), 0);
   const totalPossibleImpactMonthly = recoveryGoals.reduce((s, g) => s + g.impact, 0);
 
@@ -159,19 +184,18 @@ export default function RevenueIntelligence({ records }: { records: SalesRecord[
   const totalPossibleGap6m = totalPossibleImpactMonthly * 6;
   const optimized6mMax = base6m + totalPossibleGap6m;
 
-  // Dynamically calculate what the current active selection yields over a 6-month period
   const selectedActiveGap6m = activeImpactMonthly * 6;
   const activeOptimized6m = base6m + selectedActiveGap6m;
 
-  // Use count-up animation states cleanly mapping to raw values
+  // Hook animation tracking directly to safe macro aggregate potential value
   const animatedGap = useCountUp(totalPossibleGap6m);
 
+  // Generate clean linear progressive chart data
   const chartData = Array.from({ length: 6 }, (_, i) => {
     const monthIndex = i + 1;
     return {
       month: `M${monthIndex}`,
       Current: Math.round(monthlyRevenueBaseline * monthIndex),
-      // Linearly ramp up selected optimization impacts as months progress
       Optimized: Math.round((monthlyRevenueBaseline * monthIndex) + (activeImpactMonthly * monthIndex)),
     };
   });
@@ -197,7 +221,7 @@ export default function RevenueIntelligence({ records }: { records: SalesRecord[
                 on the table.
               </h2>
               <p className="text-gray-400 text-sm leading-relaxed mb-5 max-w-xl">
-                Based on your team data — your current path generates {formatMoney(base6m)} over 6 months.
+                Based on your team data over {monthsInDataset.toFixed(1)} months — your current path generates {formatMoney(base6m)} over 6 months.
                 With the optimizations below you could generate {formatMoney(optimized6mMax)}.
               </p>
               <button
@@ -211,7 +235,7 @@ export default function RevenueIntelligence({ records }: { records: SalesRecord[
               </button>
             </div>
 
-            {/* Summary stats banners */}
+            {/* Summary metrics widgets */}
             <div className="grid grid-cols-2 gap-3 flex-shrink-0">
               {[
                 { label: "Current 6-mo Path", value: formatMoney(base6m), color: "text-gray-300" },
@@ -219,7 +243,7 @@ export default function RevenueIntelligence({ records }: { records: SalesRecord[
                 { label: "Total Max Gap", value: formatMoney(totalPossibleGap6m), color: "text-red-400" },
                 { label: "Quick Wins Found", value: String(recoveryGoals.length), color: "text-blue-400" },
               ].map(s => (
-                <div key={s.label} className="bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-center min-w-[140px]">
+                <div key={s.label} className="bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-center min-w-[145px]">
                   <p className="text-gray-400 text-xs mb-1">{s.label}</p>
                   <p className={"text-lg font-black " + s.color}>{s.value}</p>
                 </div>
@@ -229,10 +253,10 @@ export default function RevenueIntelligence({ records }: { records: SalesRecord[
         </div>
       </div>
 
-      {/* Expanded recovery plan section */}
+      {/* Expanded Interactive Action Section */}
       {expanded && (
         <>
-          {/* Interactive goal builder card */}
+          {/* Interactive goal builder checklist card */}
           <div className="bg-[#0d0d18] border border-white/10 rounded-2xl p-6">
             <div className="flex items-center justify-between mb-5">
               <div>
@@ -294,7 +318,7 @@ export default function RevenueIntelligence({ records }: { records: SalesRecord[
               <div className="mt-4 bg-emerald-500/10 border border-emerald-500/20 rounded-xl px-5 py-4 flex items-center justify-between">
                 <div>
                   <p className="text-emerald-400 font-black text-sm">Selected goals total impact</p>
-                  <p className="text-gray-500 text-xs mt-0.5">Implement these this week to start seeing results within 30 days</p>
+                  <p className="text-gray-500 text-xs mt-0.5">Implement these changes to start achieving localized run-rate uplifts</p>
                 </div>
                 <div className="text-right">
                   <p className="text-emerald-400 font-black text-2xl">+{formatMoney(activeImpactMonthly)}/mo</p>
@@ -304,13 +328,13 @@ export default function RevenueIntelligence({ records }: { records: SalesRecord[
             )}
           </div>
 
-          {/* 6-month cumulative projection chart */}
+          {/* 6-month progressive trend area chart */}
           <div className="bg-[#0d0d18] border border-white/10 rounded-2xl p-6">
             <div className="mb-5 flex items-start justify-between">
               <div>
                 <h3 className="text-white font-black text-base">Cumulative Revenue Path: Current vs Optimized</h3>
                 <p className="text-gray-500 text-xs mt-0.5">
-                  {activeImpactMonthly > 0 ? "Green line updates as you select goals above" : "Select goals above to see the optimized cumulative growth trajectory"}
+                  {activeImpactMonthly > 0 ? "Green line updates as you select plan actions above" : "Select individual action cards above to chart an optimized trajectory"}
                 </p>
               </div>
               <div className="flex items-center gap-4">
@@ -347,7 +371,7 @@ export default function RevenueIntelligence({ records }: { records: SalesRecord[
             </ResponsiveContainer>
           </div>
 
-          {/* Month by month break down data grid table */}
+          {/* Month by month breakdown grid matrix table */}
           <div className="bg-[#0d0d18] border border-white/10 rounded-2xl p-6">
             <h3 className="text-white font-black text-base mb-4">Month-by-Month Cumulative Breakdown</h3>
             <div className="overflow-x-auto">
