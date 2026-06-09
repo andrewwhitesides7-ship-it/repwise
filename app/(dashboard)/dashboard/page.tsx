@@ -34,19 +34,24 @@ export default async function DashboardPage() {
 
   const records = salesRecords || [];
 
-  const totalKnocked = records.reduce((s: number, r: any) => s + (r.knocked || 0), 0);
-  const totalClosed = records.reduce((s: number, r: any) => s + (r.closed || 0), 0);
-  const totalRevenue = records.reduce((s: number, r: any) => s + (r.deal_value || 0), 0);
-  const closeRate = totalKnocked > 0 ? ((totalClosed / totalKnocked) * 100).toFixed(1) : "0";
+  const totalKnocked = records.reduce((s: number, r: any) => s + (Number(r.knocked) || 0), 0);
+  const totalClosed = records.reduce((s: number, r: any) => s + (Number(r.closed) || 0), 0);
+  const totalRevenue = records.reduce((s: number, r: any) => s + (Number(r.deal_value) || 0), 0);
+  const closeRate = totalKnocked > 0 ? ((totalClosed / totalKnocked) * 100).toFixed(1) : "0.0";
   const avgDeal = totalClosed > 0 ? Math.round(totalRevenue / totalClosed) : 0;
 
-  const repMap: Record<string, { closes: number }> = {};
+  const repMap: Record<string, { closes: number; knocked: number; revenue: number }> = {};
   records.forEach((r: any) => {
     if (!r.rep_name) return;
-    if (!repMap[r.rep_name]) repMap[r.rep_name] = { closes: 0 };
-    repMap[r.rep_name].closes += r.closed || 0;
+    if (!repMap[r.rep_name]) repMap[r.rep_name] = { closes: 0, knocked: 0, revenue: 0 };
+    repMap[r.rep_name].closes += Number(r.closed) || 0;
+    repMap[r.rep_name].knocked += Number(r.knocked) || 0;
+    repMap[r.rep_name].revenue += Number(r.deal_value) || 0;
   });
-  const topRepEntry = Object.entries(repMap).sort((a, b) => b[1].closes - a[1].closes)[0];
+
+  const topRepEntry = Object.entries(repMap)
+    .sort((a, b) => b[1].closes - a[1].closes)[0];
+
   const topRep = topRepEntry?.[0] || "";
   const topRepCloses = topRepEntry?.[1]?.closes || 0;
 
@@ -58,6 +63,7 @@ export default async function DashboardPage() {
     avgDeal,
     topRep,
     topRepCloses,
+    totalRecords: records.length,
   };
 
   return (
@@ -70,4 +76,3 @@ export default async function DashboardPage() {
     />
   );
 }
-

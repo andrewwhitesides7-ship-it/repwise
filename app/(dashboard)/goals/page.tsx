@@ -8,7 +8,7 @@ export default async function GoalsPage() {
   const [{ data: goals }, { count: salesCount }] = await Promise.all([
     supabase
       .from("goals")
-      .select(`*, goal_checklist_items(*)`)
+      .select("*, goal_checklist_items(*)")
       .eq("user_id", user!.id)
       .in("status", ["active", "completed"])
       .order("created_at", { ascending: false }),
@@ -18,7 +18,10 @@ export default async function GoalsPage() {
       .eq("user_id", user!.id),
   ]);
 
-  return <GoalsClient goals={goals || []} hasData={(salesCount || 0) > 0} />;
+  return (
+    <GoalsClient
+      goals={goals || []}
+      hasData={(salesCount || 0) > 0}
+    />
+  );
 }
-
-

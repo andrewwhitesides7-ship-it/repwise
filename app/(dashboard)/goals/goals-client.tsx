@@ -2,12 +2,11 @@
 
 import { useState } from "react";
 import {
-  generateAIGoals,
   createCustomGoal,
   updateGoalProgress,
-  completeGoal,
   dismissGoal,
   toggleChecklistItem,
+  generateAIGoals,
 } from "@/app/actions/goals";
 
 interface ChecklistItem {
@@ -20,416 +19,509 @@ interface Goal {
   id: string;
   title: string;
   description: string | null;
-  target_value: number | null;
+  target_value: number;
   current_value: number;
-  unit: string | null;
-  status: "active" | "completed" | "dismissed";
+  unit: string;
+  status: string;
   is_ai_generated: boolean;
   ai_reasoning: string | null;
-  created_at: string;
   goal_checklist_items: ChecklistItem[];
+  created_at: string;
 }
 
-export default function GoalsClient({ goals, hasData }: { goals: Goal[]; hasData: boolean }) {
-  const [generating, setGenerating] = useState(false);
-  const [genError, setGenError] = useState("");
-  const [showCustomForm, setShowCustomForm] = useState(false);
-  const [creating, setCreating] = useState(false);
-  const [expandedGoal, setExpandedGoal] = useState<string | null>(null);
-  const [updatingProgress, setUpdatingProgress] = useState<string | null>(null);
-  const [progressValues, setProgressValues] = useState<Record<string, string>>({});
+interface GoalsClientProps {
+  goals: Goal[];
+  hasData: boolean;
+}
 
-  const activeGoals = goals.filter(g => g.status === "active");
-  const completedGoals = goals.filter(g => g.status === "completed");
-  const aiGoals = activeGoals.filter(g => g.is_ai_generated);
-  const customGoals = activeGoals.filter(g => !g.is_ai_generated);
+const TIMELINE_STEPS = ["Not started", "In progress", "Halfway", "Almost done", "Complete"];
 
-  async function handleGenerateGoals() {
-    setGenerating(true);
-    setGenError("");
-    try {
-      await generateAIGoals();
-    } catch (err) {
-      setGenError(err instanceof Error ? err.message : "Failed to generate goals");
-    } finally {
-      setGenerating(false);
-    }
-  }
+function getStep(current: number, target: number): number {
+  if (current === 0) return 0;
+  const pct = current / target;
+  if (pct >= 1) return 4;
+  if (pct >= 0.75) return 3;
+  if (pct >= 0.5) return 2;
+  return 1;
+}
 
-  async function handleCreateCustom(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-    setCreating(true);
-    try {
-      await createCustomGoal(new FormData(e.currentTarget));
-      setShowCustomForm(false);
-      (e.target as HTMLFormElement).reset();
-    } catch {
-      // ignore
-    } finally {
-      setCreating(false);
-    }
-  }
+function getWeeks(current: number, target: number): number {
+  if (current >= target) return 0;
+  return Math.ceil((1 - Math.min(current / target, 1)) * 8);
+}
 
-  async function handleUpdateProgress(goalId: string) {
-    const val = parseFloat(progressValues[goalId] || "0");
-    if (isNaN(val)) return;
-    setUpdatingProgress(goalId);
-    await updateGoalProgress(goalId, val);
-    setUpdatingProgress(null);
-  }
-
-  function getProgress(goal: Goal) {
-    if (!goal.target_value) return 0;
-    return Math.min((goal.current_value / goal.target_value) * 100, 100);
-  }
-
+function TimelineBar({ current, target }: { current: number; target: number }) {
+  const step = getStep(current, target);
+  const pct = Math.min((current / target) * 100, 100);
   return (
-    <div className="p-4 md:p-8 max-w-5xl mx-auto">
-      <div className="flex items-start justify-between mb-8">
-        <div>
-          <h1 className="text-xl md:text-2xl font-bold text-white mb-1">Goals</h1>
-          <p className="text-gray-400 text-sm">Track progress, get AI-recommended goals, and stay focused on what moves the needle.</p>
-        </div>
-        <div className="flex items-center gap-3">
-          <button
-            onClick={() => setShowCustomForm(true)}
-            className="flex items-center gap-2 bg-gray-800 hover:bg-gray-700 border border-gray-700 text-white font-semibold px-4 py-2.5 rounded-xl text-sm transition"
-          >
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
-            </svg>
-            Add goal
-          </button>
-          <button
-            onClick={handleGenerateGoals}
-            disabled={generating || !hasData}
-            className="flex items-center gap-2 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white font-semibold px-4 py-2.5 rounded-xl text-sm transition shadow-lg shadow-blue-500/20"
-          >
-            {generating ? (
-              <>
-                <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
-                </svg>
-                Generating...
-              </>
-            ) : (
-              <>
-                <span>🧠</span>
-                Generate AI goals
-              </>
-            )}
-          </button>
-        </div>
+    <div className="mt-4">
+      <div className="flex items-center justify-between mb-2">
+        <span className="text-gray-600 text-xs">Progress timeline</span>
+        <span className="text-white text-xs font-bold">{pct.toFixed(0)}%</span>
       </div>
-
-      {genError && (
-        <div className="mb-6 bg-red-500/10 border border-red-500/30 rounded-xl px-5 py-4">
-          <p className="text-red-400 text-sm">{genError}</p>
-        </div>
-      )}
-
-      {!hasData && (
-        <div className="mb-6 bg-blue-500/5 border border-blue-500/20 rounded-2xl p-5 flex items-center gap-4">
-          <div className="text-2xl">📊</div>
-          <div>
-            <p className="text-white text-sm font-medium">Upload data to get AI goal recommendations</p>
-            <p className="text-gray-400 text-xs mt-0.5">AI goals are generated based on your actual sales data. Upload a CSV first.</p>
-          </div>
-          <a href="/upload" className="ml-auto bg-blue-600 hover:bg-blue-500 text-white font-semibold px-4 py-2 rounded-xl text-sm transition whitespace-nowrap">
-            Upload data
-          </a>
-        </div>
-      )}
-
-      {/* Custom goal form */}
-      {showCustomForm && (
-        <div className="mb-6 bg-gray-900 border border-gray-800 rounded-2xl p-6">
-          <h3 className="text-white font-semibold mb-4">Create custom goal</h3>
-          <form onSubmit={handleCreateCustom} className="space-y-4">
-            <div className="grid md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-xs text-gray-400 mb-1.5">Goal title</label>
-                <input name="title" required placeholder="e.g. Hit 25% close rate" className="w-full bg-gray-800 border border-gray-700 text-white placeholder-gray-500 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition" />
-              </div>
-              <div>
-                <label className="block text-xs text-gray-400 mb-1.5">Description (optional)</label>
-                <input name="description" placeholder="Why this goal matters..." className="w-full bg-gray-800 border border-gray-700 text-white placeholder-gray-500 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition" />
-              </div>
-              <div>
-                <label className="block text-xs text-gray-400 mb-1.5">Target value</label>
-                <input name="target_value" type="number" step="0.1" placeholder="e.g. 25" className="w-full bg-gray-800 border border-gray-700 text-white placeholder-gray-500 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition" />
-              </div>
-              <div>
-                <label className="block text-xs text-gray-400 mb-1.5">Unit</label>
-                <input name="unit" placeholder="e.g. % or closes/week or $" className="w-full bg-gray-800 border border-gray-700 text-white placeholder-gray-500 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition" />
-              </div>
+      <div className="h-1.5 bg-white/6 rounded-full overflow-hidden mb-3">
+        <div
+          className="h-full bg-gradient-to-r from-blue-600 to-blue-400 rounded-full transition-all duration-1000"
+          style={{ width: pct + "%" }}
+        />
+      </div>
+      <div className="flex justify-between">
+        {TIMELINE_STEPS.map((label, i) => {
+          const stepPct = (i / (TIMELINE_STEPS.length - 1)) * 100;
+          const isActive = pct >= stepPct;
+          const isCurrent = step === i;
+          return (
+            <div key={label} className="flex flex-col items-center gap-1.5">
+              <div className={"w-2 h-2 rounded-full border transition-all duration-300 " + (isActive ? "bg-blue-400 border-blue-400" : "bg-transparent border-white/20")} />
+              <span className={"text-[9px] font-semibold " + (isCurrent ? "text-blue-400" : isActive ? "text-gray-500" : "text-gray-700")}>
+                {label}
+              </span>
             </div>
-            <div className="flex items-center gap-3">
-              <button type="submit" disabled={creating} className="bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white font-semibold px-5 py-2.5 rounded-xl text-sm transition">
-                {creating ? "Creating..." : "Create goal"}
-              </button>
-              <button type="button" onClick={() => setShowCustomForm(false)} className="text-gray-500 hover:text-gray-300 text-sm transition">
-                Cancel
-              </button>
-            </div>
-          </form>
-        </div>
-      )}
-
-      {/* AI Goals */}
-      {aiGoals.length > 0 && (
-        <div className="mb-8">
-          <div className="flex items-center gap-2 mb-4">
-            <span className="text-lg">🧠</span>
-            <h2 className="text-white font-semibold">AI Recommended Goals</h2>
-            <span className="text-xs text-blue-400 bg-blue-500/10 border border-blue-500/20 px-2 py-0.5 rounded-full">{aiGoals.length} goals</span>
-          </div>
-          <div className="space-y-4">
-            {aiGoals.map(goal => (
-              <GoalCard
-                key={goal.id}
-                goal={goal}
-                expanded={expandedGoal === goal.id}
-                onToggle={() => setExpandedGoal(expandedGoal === goal.id ? null : goal.id)}
-                progressValue={progressValues[goal.id] || ""}
-                onProgressChange={val => setProgressValues(p => ({ ...p, [goal.id]: val }))}
-                onUpdateProgress={() => handleUpdateProgress(goal.id)}
-                updatingProgress={updatingProgress === goal.id}
-                onComplete={() => completeGoal(goal.id)}
-                onDismiss={() => dismissGoal(goal.id)}
-                getProgress={getProgress}
-              />
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Custom Goals */}
-      {customGoals.length > 0 && (
-        <div className="mb-8">
-          <div className="flex items-center gap-2 mb-4">
-            <span className="text-lg">🎯</span>
-            <h2 className="text-white font-semibold">Custom Goals</h2>
-            <span className="text-xs text-gray-400 bg-gray-800 border border-gray-700 px-2 py-0.5 rounded-full">{customGoals.length} goals</span>
-          </div>
-          <div className="space-y-4">
-            {customGoals.map(goal => (
-              <GoalCard
-                key={goal.id}
-                goal={goal}
-                expanded={expandedGoal === goal.id}
-                onToggle={() => setExpandedGoal(expandedGoal === goal.id ? null : goal.id)}
-                progressValue={progressValues[goal.id] || ""}
-                onProgressChange={val => setProgressValues(p => ({ ...p, [goal.id]: val }))}
-                onUpdateProgress={() => handleUpdateProgress(goal.id)}
-                updatingProgress={updatingProgress === goal.id}
-                onComplete={() => completeGoal(goal.id)}
-                onDismiss={() => dismissGoal(goal.id)}
-                getProgress={getProgress}
-              />
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Completed Goals */}
-      {completedGoals.length > 0 && (
-        <div>
-          <div className="flex items-center gap-2 mb-4">
-            <span className="text-lg">✅</span>
-            <h2 className="text-white font-semibold">Completed</h2>
-            <span className="text-xs text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-full">{completedGoals.length} done</span>
-          </div>
-          <div className="space-y-3">
-            {completedGoals.map(goal => (
-              <div key={goal.id} className="bg-gray-900/50 border border-gray-800 rounded-2xl p-5 flex items-center justify-between opacity-60">
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 bg-emerald-500/10 rounded-xl flex items-center justify-center">
-                    <svg className="w-4 h-4 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
-                  </div>
-                  <div>
-                    <p className="text-white font-medium text-sm line-through">{goal.title}</p>
-                    {goal.target_value && <p className="text-gray-600 text-xs">Target: {goal.target_value} {goal.unit}</p>}
-                  </div>
-                </div>
-                <span className="text-xs text-emerald-400">Completed</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Empty state */}
-      {goals.length === 0 && (
-        <div className="bg-gray-900 border border-gray-800 border-dashed rounded-2xl p-16 text-center">
-          <div className="text-5xl mb-4">🎯</div>
-          <h3 className="text-white font-semibold text-lg mb-2">No goals yet</h3>
-          <p className="text-gray-400 text-sm mb-6 max-w-sm mx-auto">
-            {hasData
-              ? "Generate AI-recommended goals based on your sales data, or create your own."
-              : "Upload your sales data first, then generate AI goals based on your actual performance."}
-          </p>
-          <div className="flex items-center justify-center gap-3">
-            {hasData && (
-              <button onClick={handleGenerateGoals} disabled={generating} className="bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white font-semibold px-6 py-3 rounded-xl text-sm transition">
-                {generating ? "Generating..." : "Generate AI goals"}
-              </button>
-            )}
-            <button onClick={() => setShowCustomForm(true)} className="bg-gray-800 hover:bg-gray-700 border border-gray-700 text-white font-semibold px-6 py-3 rounded-xl text-sm transition">
-              Add custom goal
-            </button>
-          </div>
-        </div>
-      )}
+          );
+        })}
+      </div>
     </div>
   );
 }
 
-function GoalCard({
-  goal,
-  expanded,
-  onToggle,
-  progressValue,
-  onProgressChange,
-  onUpdateProgress,
-  updatingProgress,
-  onComplete,
-  onDismiss,
-  getProgress,
-}: {
-  goal: Goal;
-  expanded: boolean;
-  onToggle: () => void;
-  progressValue: string;
-  onProgressChange: (val: string) => void;
-  onUpdateProgress: () => void;
-  updatingProgress: boolean;
-  onComplete: () => void;
-  onDismiss: () => void;
-  getProgress: (goal: Goal) => number;
-}) {
-  const progress = getProgress(goal);
-  const checklistItems = goal.goal_checklist_items || [];
-  const completedItems = checklistItems.filter(i => i.completed).length;
+function GoalCard({ goal, onUpdate }: { goal: Goal; onUpdate: () => void }) {
+  const [expanded, setExpanded] = useState(false);
+  const [editing, setEditing] = useState(false);
+  const [newValue, setNewValue] = useState(String(goal.current_value));
+  const [loading, setLoading] = useState(false);
+
+  const pct = Math.min((goal.current_value / goal.target_value) * 100, 100);
+  const weeks = getWeeks(goal.current_value, goal.target_value);
+  const isComplete = goal.status === "completed" || pct >= 100;
+  const completedItems = goal.goal_checklist_items?.filter(i => i.completed).length || 0;
+  const totalItems = goal.goal_checklist_items?.length || 0;
+  const circumference = 2 * Math.PI * 20;
+  const offset = circumference - (pct / 100) * circumference;
+
+  async function handleUpdate() {
+    setLoading(true);
+    await updateGoalProgress(goal.id, Number(newValue));
+    setEditing(false);
+    setLoading(false);
+    onUpdate();
+  }
+
+  async function handleToggle(itemId: string, completed: boolean) {
+    await toggleChecklistItem(itemId, !completed);
+    onUpdate();
+  }
+
+  async function handleDismiss() {
+    await dismissGoal(goal.id);
+    onUpdate();
+  }
 
   return (
-    <div className={`bg-gray-900 border rounded-2xl overflow-hidden transition-all duration-200 ${expanded ? "border-blue-500/30" : "border-gray-800 hover:border-gray-700"}`}>
-      <div className="p-5 cursor-pointer" onClick={onToggle}>
-        <div className="flex items-start justify-between gap-4">
+    <div className={"bg-[#0d0d18] border rounded-2xl overflow-hidden transition-all duration-300 " + (isComplete ? "border-emerald-500/25" : "border-white/6 hover:border-white/12")}>
+      <div className="p-5 cursor-pointer" onClick={() => setExpanded(!expanded)}>
+        <div className="flex items-start gap-4">
+          <div className="relative w-12 h-12 flex-shrink-0">
+            <svg className="w-12 h-12 -rotate-90" viewBox="0 0 44 44">
+              <circle cx="22" cy="22" r="20" fill="none" stroke="#ffffff06" strokeWidth="3" />
+              <circle
+                cx="22" cy="22" r="20" fill="none"
+                stroke={isComplete ? "#10b981" : "#3b82f6"}
+                strokeWidth="3"
+                strokeDasharray={circumference}
+                strokeDashoffset={offset}
+                strokeLinecap="round"
+                className="transition-all duration-1000"
+              />
+            </svg>
+            <span className="absolute inset-0 flex items-center justify-center text-white text-[10px] font-black">
+              {pct.toFixed(0)}%
+            </span>
+          </div>
+
           <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 mb-2 flex-wrap">
-              {goal.is_ai_generated && (
-                <span className="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full bg-blue-500/15 text-blue-400 border border-blue-500/20">
-                  🧠 AI Goal
-                </span>
+            <div className="flex items-start justify-between gap-2 mb-1">
+              <div className="flex items-center gap-2 flex-wrap">
+                <h3 className="text-white font-black text-sm leading-tight">{goal.title}</h3>
+                {goal.is_ai_generated && (
+                  <span className="text-[10px] text-blue-400 bg-blue-500/10 border border-blue-500/15 px-1.5 py-0.5 rounded-full font-bold">AI</span>
+                )}
+                {isComplete && (
+                  <span className="text-[10px] text-emerald-400 bg-emerald-500/10 border border-emerald-500/15 px-1.5 py-0.5 rounded-full font-bold">DONE</span>
+                )}
+              </div>
+              <svg
+                className={"w-4 h-4 text-gray-600 flex-shrink-0 transition-transform duration-200 " + (expanded ? "rotate-180" : "")}
+                fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+              </svg>
+            </div>
+
+            <div className="flex items-center gap-3 text-xs text-gray-600 flex-wrap">
+              <span className="font-semibold text-gray-400">{goal.current_value} / {goal.target_value} {goal.unit}</span>
+              {!isComplete && weeks > 0 && (
+                <span>~{weeks} weeks left</span>
               )}
-              {checklistItems.length > 0 && (
-                <span className="text-xs text-gray-500">
-                  {completedItems}/{checklistItems.length} steps done
-                </span>
+              {totalItems > 0 && (
+                <span>{completedItems}/{totalItems} steps done</span>
               )}
             </div>
-            <h3 className="text-white font-semibold text-sm mb-1">{goal.title}</h3>
-            {goal.description && <p className="text-gray-500 text-xs leading-relaxed">{goal.description}</p>}
-          </div>
-          <div className="flex items-center gap-2 flex-shrink-0">
-            {goal.target_value && (
-              <div className="text-right">
-                <p className="text-white text-sm font-bold">{goal.current_value}<span className="text-gray-500 text-xs"> / {goal.target_value} {goal.unit}</span></p>
-                <p className="text-gray-600 text-xs">{progress.toFixed(0)}% complete</p>
-              </div>
-            )}
-            <svg className={`w-4 h-4 text-gray-600 transition-transform duration-200 ${expanded ? "rotate-180" : ""}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" /></svg>
+
+            <TimelineBar current={goal.current_value} target={goal.target_value} />
           </div>
         </div>
-
-        {goal.target_value && (
-          <div className="mt-3 w-full bg-gray-800 rounded-full h-1.5">
-            <div
-              className={`h-1.5 rounded-full transition-all duration-500 ${progress >= 100 ? "bg-emerald-500" : progress >= 50 ? "bg-blue-500" : "bg-blue-600"}`}
-              style={{ width: `${progress}%` }}
-            />
-          </div>
-        )}
       </div>
 
       {expanded && (
-        <div className="border-t border-gray-800 p-5 space-y-5">
-          {goal.ai_reasoning && (
-            <div className="bg-blue-500/5 border border-blue-500/10 rounded-xl p-4">
-              <p className="text-xs text-blue-400 font-medium mb-1">Why this goal?</p>
-              <p className="text-gray-400 text-xs leading-relaxed">{goal.ai_reasoning}</p>
+        <div className="px-5 pb-5 border-t border-white/5 pt-4 space-y-4">
+          {(goal.ai_reasoning || goal.description) && (
+            <div className="bg-blue-500/5 border border-blue-500/10 rounded-xl p-3">
+              <p className="text-blue-400 text-xs font-bold mb-1">WHY THIS GOAL</p>
+              <p className="text-gray-400 text-xs leading-relaxed">{goal.ai_reasoning || goal.description}</p>
             </div>
           )}
 
-          {checklistItems.length > 0 && (
+          {goal.goal_checklist_items?.length > 0 && (
             <div>
-              <p className="text-white text-xs font-semibold mb-3">Action steps</p>
+              <p className="text-white text-xs font-black uppercase tracking-wider mb-2">Action Steps</p>
               <div className="space-y-2">
-                {checklistItems.map(item => (
-                  <label key={item.id} className="flex items-start gap-3 cursor-pointer group">
-                    <div className="relative flex-shrink-0 mt-0.5">
-                      <input
-                        type="checkbox"
-                        checked={item.completed}
-                        onChange={e => toggleChecklistItem(item.id, e.target.checked)}
-                        className="sr-only"
-                      />
-                      <div className={`w-4 h-4 rounded border transition-all ${item.completed ? "bg-blue-600 border-blue-600" : "border-gray-600 group-hover:border-gray-500"}`}>
-                        {item.completed && (
-                          <svg className="w-3 h-3 text-white m-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
-                        )}
-                      </div>
+                {goal.goal_checklist_items.map((item, i) => (
+                  <div
+                    key={item.id}
+                    onClick={() => handleToggle(item.id, item.completed)}
+                    className={"flex items-start gap-3 p-3 rounded-xl border cursor-pointer transition-all duration-200 " + (item.completed ? "bg-emerald-500/5 border-emerald-500/10 opacity-60" : "bg-white/2 border-white/6 hover:border-white/12")}
+                  >
+                    <div className={"w-5 h-5 rounded-lg border-2 flex items-center justify-center flex-shrink-0 mt-0.5 " + (item.completed ? "bg-emerald-500 border-emerald-500" : "border-white/20")}>
+                      {item.completed && (
+                        <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                        </svg>
+                      )}
                     </div>
-                    <span className={`text-xs leading-relaxed ${item.completed ? "text-gray-600 line-through" : "text-gray-300"}`}>{item.title}</span>
-                  </label>
+                    <p className={"text-sm font-semibold " + (item.completed ? "line-through text-gray-600" : "text-white")}>
+                      Step {i + 1}: {item.title}
+                    </p>
+                  </div>
                 ))}
               </div>
             </div>
           )}
 
-          {goal.target_value && (
-            <div>
-              <p className="text-white text-xs font-semibold mb-3">Update progress</p>
-              <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 flex-wrap">
+            {editing ? (
+              <>
                 <input
                   type="number"
-                  step="0.1"
-                  value={progressValue}
-                  onChange={e => onProgressChange(e.target.value)}
-                  placeholder={`Current value (${goal.unit || "number"})`}
-                  className="flex-1 bg-gray-800 border border-gray-700 text-white placeholder-gray-500 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
+                  value={newValue}
+                  onChange={e => setNewValue(e.target.value)}
+                  className="flex-1 min-w-0 bg-white/5 border border-white/10 text-white text-sm rounded-xl px-3 py-2 focus:outline-none focus:border-blue-500/50"
+                  placeholder={"Current " + goal.unit}
                 />
-                <button
-                  onClick={onUpdateProgress}
-                  disabled={updatingProgress}
-                  className="bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white font-semibold px-4 py-2.5 rounded-xl text-sm transition whitespace-nowrap"
-                >
-                  {updatingProgress ? "Saving..." : "Update"}
+                <button onClick={handleUpdate} disabled={loading} className="bg-blue-600 hover:bg-blue-500 text-white font-bold px-4 py-2 rounded-xl text-xs transition-all duration-200">
+                  {loading ? "..." : "Save"}
                 </button>
-              </div>
-            </div>
-          )}
-
-          <div className="flex items-center gap-3 pt-2 border-t border-gray-800">
-            <button
-              onClick={onComplete}
-              className="flex items-center gap-1.5 text-xs text-emerald-400 hover:text-emerald-300 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/20 px-3 py-2 rounded-xl transition"
-            >
-              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
-              Mark complete
-            </button>
-            <button
-              onClick={onDismiss}
-              className="text-xs text-gray-600 hover:text-gray-400 px-3 py-2 rounded-xl hover:bg-gray-800 transition"
-            >
-              Dismiss
-            </button>
+                <button onClick={() => setEditing(false)} className="bg-white/5 hover:bg-white/10 text-gray-400 font-bold px-4 py-2 rounded-xl text-xs transition-all duration-200">
+                  Cancel
+                </button>
+              </>
+            ) : (
+              <>
+                <button onClick={() => setEditing(true)} className="flex items-center gap-2 bg-white/4 hover:bg-white/8 border border-white/8 text-gray-400 hover:text-white font-bold px-4 py-2 rounded-xl text-xs transition-all duration-200">
+                  Update progress
+                </button>
+                <button onClick={handleDismiss} className="flex items-center gap-2 bg-white/4 hover:bg-red-500/10 border border-white/8 hover:border-red-500/20 text-gray-600 hover:text-red-400 font-bold px-4 py-2 rounded-xl text-xs transition-all duration-200">
+                  Dismiss
+                </button>
+              </>
+            )}
           </div>
         </div>
       )}
     </div>
   );
 }
+
+function CreateGoalModal({ onClose, onCreated }: { onClose: () => void; onCreated: () => void }) {
+  const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
+  const [target, setTarget] = useState("");
+  const [unit, setUnit] = useState("closes");
+  const [loading, setLoading] = useState(false);
+
+  const presets = [
+    { title: "Increase close rate to 30%", target: "30", unit: "%" },
+    { title: "Close 50 deals this month", target: "50", unit: "closes" },
+    { title: "Generate $100K revenue", target: "100000", unit: "dollars" },
+    { title: "Knock 500 doors this week", target: "500", unit: "knocks" },
+    { title: "Follow up on 20 warm leads", target: "20", unit: "follow-ups" },
+    { title: "Onboard 5 new reps", target: "5", unit: "reps" },
+  ];
+
+  async function handleCreate(e: React.FormEvent) {
+    e.preventDefault();
+    if (!title || !target) return;
+    setLoading(true);
+    const fd = new FormData();
+    fd.append("title", title);
+    fd.append("description", description);
+    fd.append("target_value", target);
+    fd.append("current_value", "0");
+    fd.append("unit", unit);
+    await createCustomGoal(fd);
+    setLoading(false);
+    onCreated();
+    onClose();
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
+      <div className="relative bg-[#0d0d18] border border-white/10 rounded-2xl p-6 w-full max-w-md shadow-2xl">
+        <div className="flex items-center justify-between mb-5">
+          <h2 className="text-white font-black text-lg">Create a goal</h2>
+          <button onClick={onClose} className="text-gray-600 hover:text-white transition-colors">
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+
+        <div className="mb-5">
+          <p className="text-gray-600 text-xs font-semibold uppercase tracking-wider mb-2">Quick presets</p>
+          <div className="grid grid-cols-2 gap-2">
+            {presets.map(p => (
+              <button
+                key={p.title}
+                type="button"
+                onClick={() => { setTitle(p.title); setTarget(p.target); setUnit(p.unit); }}
+                className="text-left bg-white/4 hover:bg-blue-500/10 border border-white/6 hover:border-blue-500/20 rounded-xl px-3 py-2 transition-all duration-200"
+              >
+                <p className="text-white text-xs font-semibold leading-tight">{p.title}</p>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <form onSubmit={handleCreate} className="space-y-3">
+          <div>
+            <label className="block text-xs font-semibold text-gray-500 mb-1.5">Goal title</label>
+            <input
+              type="text"
+              required
+              value={title}
+              onChange={e => setTitle(e.target.value)}
+              placeholder="e.g. Close 50 deals this month"
+              className="w-full bg-white/4 border border-white/8 text-white placeholder-gray-700 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-blue-500/50 transition-all"
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-semibold text-gray-500 mb-1.5">Target</label>
+              <input
+                type="number"
+                required
+                value={target}
+                onChange={e => setTarget(e.target.value)}
+                placeholder="50"
+                className="w-full bg-white/4 border border-white/8 text-white placeholder-gray-700 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-blue-500/50 transition-all"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-gray-500 mb-1.5">Unit</label>
+              <select
+                value={unit}
+                onChange={e => setUnit(e.target.value)}
+                className="w-full bg-white/4 border border-white/8 text-white rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-blue-500/50 transition-all"
+              >
+                {["closes", "knocks", "dollars", "%", "follow-ups", "reps", "days"].map(u => (
+                  <option key={u} value={u} className="bg-gray-900">{u}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+          <div>
+            <label className="block text-xs font-semibold text-gray-500 mb-1.5">Notes (optional)</label>
+            <textarea
+              value={description}
+              onChange={e => setDescription(e.target.value)}
+              placeholder="Why this goal matters..."
+              rows={2}
+              className="w-full bg-white/4 border border-white/8 text-white placeholder-gray-700 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-blue-500/50 transition-all resize-none"
+            />
+          </div>
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white font-black px-4 py-3 rounded-xl text-sm transition-all duration-200 shadow-lg shadow-blue-600/25 hover:-translate-y-0.5"
+          >
+            {loading ? "Creating..." : "Create goal"}
+          </button>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+export default function GoalsClient({ goals: initialGoals, hasData }: GoalsClientProps) {
+  const [showCreate, setShowCreate] = useState(false);
+  const [filter, setFilter] = useState<"active" | "completed" | "all">("active");
+  const [generatingAI, setGeneratingAI] = useState(false);
+
+  function refresh() {
+    window.location.reload();
+  }
+
+  async function handleGenerateAI() {
+    setGeneratingAI(true);
+    try {
+      await generateAIGoals();
+      refresh();
+    } catch (err) {
+      console.error(err);
+      setGeneratingAI(false);
+    }
+  }
+
+  const active = initialGoals.filter(g => g.status === "active" && (g.current_value / g.target_value) < 1);
+  const completed = initialGoals.filter(g => g.status === "completed" || (g.current_value / g.target_value) >= 1);
+  const filtered = filter === "all" ? initialGoals : filter === "active" ? active : completed;
+
+  const totalProgress = active.length > 0
+    ? active.reduce((s, g) => s + Math.min(g.current_value / g.target_value, 1), 0) / active.length * 100
+    : 0;
+
+  return (
+    <div className="min-h-screen bg-[#080810] p-5 md:p-7">
+      <div className="fixed inset-0 pointer-events-none overflow-hidden">
+        <div className="absolute top-0 right-0 w-[400px] h-[400px] bg-blue-600/4 rounded-full blur-[100px]" />
+        <div className="absolute bottom-0 left-0 w-[300px] h-[300px] bg-indigo-600/3 rounded-full blur-[80px]" />
+      </div>
+
+      <div className="relative z-10 max-w-4xl mx-auto">
+
+        <div className="flex items-start justify-between mb-8">
+          <div>
+            <h1 className="text-2xl md:text-3xl font-black text-white mb-1">Goals</h1>
+            <p className="text-gray-600 text-sm">
+              {active.length} active · {completed.length} completed · {totalProgress.toFixed(0)}% overall progress
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            {hasData && (
+              <button
+                onClick={handleGenerateAI}
+                disabled={generatingAI}
+                className="flex items-center gap-2 bg-white/5 hover:bg-white/10 border border-white/8 text-gray-400 hover:text-white font-bold px-4 py-2.5 rounded-xl text-sm transition-all duration-200"
+              >
+                {generatingAI ? (
+                  <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
+                  </svg>
+                ) : (
+                  <span>✨</span>
+                )}
+                {generatingAI ? "Generating..." : "AI goals"}
+              </button>
+            )}
+            <button
+              onClick={() => setShowCreate(true)}
+              className="flex items-center gap-2 bg-blue-600 hover:bg-blue-500 text-white font-bold px-4 py-2.5 rounded-xl text-sm transition-all duration-200 shadow-lg shadow-blue-600/25 hover:-translate-y-0.5"
+            >
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+              </svg>
+              New goal
+            </button>
+          </div>
+        </div>
+
+        {active.length > 0 && (
+          <div className="bg-[#0d0d18] border border-white/6 rounded-2xl p-5 mb-6">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-white font-black text-sm">Overall progress</h3>
+              <span className="text-blue-400 font-black text-sm">{totalProgress.toFixed(0)}%</span>
+            </div>
+            <div className="w-full bg-white/5 rounded-full h-2">
+              <div
+                className="bg-gradient-to-r from-blue-600 to-blue-400 h-2 rounded-full transition-all duration-1000"
+                style={{ width: totalProgress + "%" }}
+              />
+            </div>
+            <div className="flex items-center justify-between mt-3 text-xs text-gray-600">
+              <span>{active.length} in progress</span>
+              <span>{completed.length} completed</span>
+            </div>
+          </div>
+        )}
+
+        {!hasData && initialGoals.length === 0 && (
+          <div className="bg-[#0d0d18] border border-white/6 border-dashed rounded-2xl p-12 text-center mb-6">
+            <div className="text-4xl mb-3">🎯</div>
+            <h3 className="text-white font-bold mb-2">Upload data to get AI-generated goals</h3>
+            <p className="text-gray-600 text-sm mb-4">
+              RepWise will analyze your team and create specific actionable goals with step-by-step plans.
+            </p>
+            <a
+              href="/upload"
+              className="inline-block bg-blue-600 hover:bg-blue-500 text-white font-bold px-5 py-2.5 rounded-xl text-sm transition"
+            >
+              Upload data
+            </a>
+          </div>
+        )}
+
+        {initialGoals.length > 0 && (
+          <div className="flex items-center gap-1 bg-[#0d0d18] border border-white/6 rounded-xl p-1 mb-5 w-fit">
+            {[
+              { id: "active" as const, label: "Active " + active.length },
+              { id: "completed" as const, label: "Completed " + completed.length },
+              { id: "all" as const, label: "All " + initialGoals.length },
+            ].map(tab => (
+              <button
+                key={tab.id}
+                onClick={() => setFilter(tab.id)}
+                className={"px-4 py-2 rounded-lg text-sm font-bold transition-all duration-200 " + (filter === tab.id ? "bg-white/8 text-white" : "text-gray-600 hover:text-gray-300")}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {filtered.length === 0 ? (
+          <div className="bg-[#0d0d18] border border-white/6 border-dashed rounded-2xl p-12 text-center">
+            <div className="text-4xl mb-3">{filter === "completed" ? "🏆" : "🎯"}</div>
+            <h3 className="text-white font-bold mb-2">
+              {filter === "completed" ? "No completed goals yet" : "No active goals"}
+            </h3>
+            <p className="text-gray-600 text-sm mb-4">
+              {filter === "completed" ? "Keep working — completed goals show here." : "Create a goal or generate AI goals from your data."}
+            </p>
+            <button
+              onClick={() => setShowCreate(true)}
+              className="inline-block bg-blue-600 hover:bg-blue-500 text-white font-bold px-5 py-2.5 rounded-xl text-sm transition"
+            >
+              Create a goal
+            </button>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {filtered.map(goal => (
+              <GoalCard key={goal.id} goal={goal} onUpdate={refresh} />
+            ))}
+          </div>
+        )}
+      </div>
+
+      {showCreate && (
+        <CreateGoalModal
+          onClose={() => setShowCreate(false)}
+          onCreated={refresh}
+        />
+      )}
+    </div>
+  );
+}
+
 
