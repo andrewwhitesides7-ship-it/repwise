@@ -10,6 +10,9 @@ import {
   SalesFunnelChart,
   TopZipsChart,
 } from "./charts";
+import RevenueIntelligence from "./revenue-intelligence";
+import RepMatrix from "./rep-matrix";
+import TerritoryMap from "./territory-map";
 
 interface Insight {
   id: string;
@@ -49,24 +52,9 @@ interface DashboardClientProps {
 }
 
 const priorityConfig = {
-  critical: {
-    label: "Critical",
-    badge: "bg-red-500/10 text-red-400 border-red-500/20",
-    dot: "bg-red-400",
-    bar: "bg-red-500",
-  },
-  opportunity: {
-    label: "Opportunity",
-    badge: "bg-emerald-500/10 text-emerald-400 border-emerald-500/20",
-    dot: "bg-emerald-400",
-    bar: "bg-emerald-500",
-  },
-  pattern: {
-    label: "Pattern",
-    badge: "bg-blue-500/10 text-blue-400 border-blue-500/20",
-    dot: "bg-blue-400",
-    bar: "bg-blue-500",
-  },
+  critical: { label: "Critical", badge: "bg-red-500/10 text-red-400 border-red-500/20", dot: "bg-red-400", bar: "bg-red-500" },
+  opportunity: { label: "Opportunity", badge: "bg-emerald-500/10 text-emerald-400 border-emerald-500/20", dot: "bg-emerald-400", bar: "bg-emerald-500" },
+  pattern: { label: "Pattern", badge: "bg-blue-500/10 text-blue-400 border-blue-500/20", dot: "bg-blue-400", bar: "bg-blue-500" },
 };
 
 function useCountUp(target: number, duration = 1200) {
@@ -89,13 +77,7 @@ function useCountUp(target: number, duration = 1200) {
 }
 
 function StatCard({ label, value, sub, icon, color, prefix = "", suffix = "" }: {
-  label: string;
-  value: number;
-  sub: string;
-  icon: string;
-  color: string;
-  prefix?: string;
-  suffix?: string;
+  label: string; value: number; sub: string; icon: string; color: string; prefix?: string; suffix?: string;
 }) {
   const count = useCountUp(value);
   return (
@@ -115,16 +97,22 @@ function StatCard({ label, value, sub, icon, color, prefix = "", suffix = "" }: 
   );
 }
 
+const TABS = [
+  { id: "actions", label: "Action Cards" },
+  { id: "revenue", label: "Revenue Recovery" },
+  { id: "reps", label: "Rep Matrix" },
+  { id: "territory", label: "Territory" },
+  { id: "analytics", label: "Analytics" },
+];
+
 export default function DashboardClient({ insights, goals, stats, userName, records = [] }: DashboardClientProps) {
+  const [activeTab, setActiveTab] = useState("actions");
   const [filter, setFilter] = useState<"all" | "critical" | "opportunity" | "pattern">("all");
-  const [activeTab, setActiveTab] = useState<"insights" | "analytics">("insights");
   const [expanded, setExpanded] = useState<string | null>(null);
   const [dismissed, setDismissed] = useState<Set<string>>(new Set());
   const [mounted, setMounted] = useState(false);
 
-  useEffect(() => {
-    setTimeout(() => setMounted(true), 100);
-  }, []);
+  useEffect(() => { setTimeout(() => setMounted(true), 100); }, []);
 
   const hour = new Date().getHours();
   const greeting = hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
@@ -132,7 +120,6 @@ export default function DashboardClient({ insights, goals, stats, userName, reco
 
   const activeInsights = insights.filter(i => !i.is_dismissed && !dismissed.has(i.id));
   const filtered = activeInsights.filter(i => filter === "all" || i.priority === filter);
-
   const counts = {
     all: activeInsights.length,
     critical: activeInsights.filter(i => i.priority === "critical").length,
@@ -147,6 +134,8 @@ export default function DashboardClient({ insights, goals, stats, userName, reco
   }
 
   const topGoals = goals.filter(g => g.status !== "completed").slice(0, 3);
+
+  const hasData = records.length > 0;
 
   return (
     <div className="min-h-screen bg-[#080810] p-5 md:p-7">
@@ -176,19 +165,13 @@ export default function DashboardClient({ insights, goals, stats, userName, reco
                   {counts.opportunity} opportunities
                 </span>
               )}
-              {counts.pattern > 0 && (
-                <span className="flex items-center gap-1.5">
-                  <span className="w-1.5 h-1.5 rounded-full bg-blue-400" />
-                  {counts.pattern} patterns
-                </span>
-              )}
             </div>
           </div>
           <Link
             href="/upload"
             className="group flex items-center gap-2 bg-blue-600 hover:bg-blue-500 text-white font-bold px-4 py-2.5 rounded-xl text-sm transition-all duration-200 shadow-lg shadow-blue-600/25 hover:-translate-y-0.5"
           >
-            <svg className="w-4 h-4 group-hover:scale-110 transition-transform duration-200" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
             </svg>
             Upload Data
@@ -214,63 +197,30 @@ export default function DashboardClient({ insights, goals, stats, userName, reco
         </div>
 
         {/* Tabs */}
-        <div className={"flex items-center justify-between mb-6 transition-all duration-700 delay-200 " + (mounted ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4")}>
-          <div className="flex items-center gap-1 bg-[#0d0d18] border border-white/6 rounded-xl p-1">
+        <div className={"flex items-center gap-1 bg-[#0d0d18] border border-white/6 rounded-xl p-1 mb-6 overflow-x-auto transition-all duration-700 delay-200 " + (mounted ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4")}>
+          {TABS.map(tab => (
             <button
-              onClick={() => setActiveTab("insights")}
-              className={"flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-all duration-200 " + (activeTab === "insights" ? "bg-white/8 text-white" : "text-gray-600 hover:text-gray-300")}
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={"flex-shrink-0 flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-all duration-200 " + (activeTab === tab.id ? "bg-white/8 text-white" : "text-gray-600 hover:text-gray-300")}
             >
-              AI Insights
-              {counts.all > 0 && (
-                <span className={"text-xs px-1.5 py-0.5 rounded-full font-black " + (activeTab === "insights" ? "bg-blue-500/20 text-blue-400" : "bg-white/8 text-gray-400")}>
-                  {counts.all}
+              {tab.label}
+              {tab.id === "actions" && counts.critical > 0 && (
+                <span className="text-xs px-1.5 py-0.5 rounded-full font-black bg-red-500/20 text-red-400">
+                  {counts.critical}
                 </span>
               )}
             </button>
-            <button
-              onClick={() => setActiveTab("analytics")}
-              className={"flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-all duration-200 " + (activeTab === "analytics" ? "bg-white/8 text-white" : "text-gray-600 hover:text-gray-300")}
-            >
-              Analytics
-            </button>
-          </div>
+          ))}
         </div>
 
-        {/* Analytics Tab */}
-        {activeTab === "analytics" && (
-          <div className={"grid md:grid-cols-2 gap-4 transition-all duration-500 " + (mounted ? "opacity-100" : "opacity-0")}>
-            <div className="bg-[#0d0d18] border border-white/6 rounded-2xl p-5">
-              <h3 className="text-white font-bold text-sm mb-4">Close Rate by Time of Day</h3>
-              <TimeOfDayChart records={records} />
-            </div>
-            <div className="bg-[#0d0d18] border border-white/6 rounded-2xl p-5">
-              <h3 className="text-white font-bold text-sm mb-4">Rep Performance</h3>
-              <RepPerformanceChart records={records} />
-            </div>
-            <div className="bg-[#0d0d18] border border-white/6 rounded-2xl p-5">
-              <h3 className="text-white font-bold text-sm mb-4">Revenue Over Time</h3>
-              <RevenueOverTimeChart records={records} />
-            </div>
-            <div className="bg-[#0d0d18] border border-white/6 rounded-2xl p-5">
-              <h3 className="text-white font-bold text-sm mb-4">Sales Funnel</h3>
-              <SalesFunnelChart records={records} />
-            </div>
-            <div className="bg-[#0d0d18] border border-white/6 rounded-2xl p-5 md:col-span-2">
-              <h3 className="text-white font-bold text-sm mb-4">Top ZIPs by Close Rate</h3>
-              <TopZipsChart records={records} />
-            </div>
-          </div>
-        )}
-
-        {/* Insights Tab */}
-        {activeTab === "insights" && (
+        {/* Action Cards Tab */}
+        {activeTab === "actions" && (
           <div className={"grid lg:grid-cols-3 gap-6 transition-all duration-700 delay-300 " + (mounted ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4")}>
-
-            {/* Insights list */}
             <div className="lg:col-span-2">
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-white font-black text-base">
-                  AI Insights
+                  Action Cards
                   <span className="text-gray-600 font-semibold text-sm ml-2">{counts.all} active</span>
                 </h2>
                 <div className="flex items-center gap-1 bg-[#0d0d18] border border-white/6 rounded-xl p-1">
@@ -280,27 +230,33 @@ export default function DashboardClient({ insights, goals, stats, userName, reco
                       onClick={() => setFilter(f)}
                       className={"px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all duration-200 " + (filter === f ? "bg-white/8 text-white" : "text-gray-600 hover:text-gray-300")}
                     >
-                      {f === "all" ? "All " + counts.all :
-                       f === "critical" ? "🔴 " + counts.critical :
-                       f === "opportunity" ? "🟢 " + counts.opportunity :
-                       "🔵 " + counts.pattern}
+                      {f === "all" ? "All " + counts.all : f === "critical" ? "🔴 " + counts.critical : f === "opportunity" ? "🟢 " + counts.opportunity : "🔵 " + counts.pattern}
                     </button>
                   ))}
                 </div>
               </div>
 
-              {filtered.length === 0 ? (
+              {!hasData ? (
+                <div className="bg-[#0d0d18] border border-white/6 border-dashed rounded-2xl p-12 text-center">
+                  <div className="text-4xl mb-3">📊</div>
+                  <h3 className="text-white font-bold mb-2">No data yet</h3>
+                  <p className="text-gray-600 text-sm mb-4">Upload your sales CSV to generate action cards.</p>
+                  <Link href="/upload" className="inline-block bg-blue-600 hover:bg-blue-500 text-white font-bold px-5 py-2.5 rounded-xl text-sm transition">
+                    Upload data
+                  </Link>
+                </div>
+              ) : filtered.length === 0 ? (
                 <div className="bg-[#0d0d18] border border-white/6 border-dashed rounded-2xl p-12 text-center">
                   <div className="text-4xl mb-3">🎉</div>
                   <h3 className="text-white font-bold mb-1">All caught up</h3>
-                  <p className="text-gray-600 text-sm mb-4">Upload new data to get fresh insights.</p>
-                  <Link href="/upload" className="inline-block bg-blue-600 hover:bg-blue-500 text-white font-bold px-5 py-2.5 rounded-xl text-sm transition-all duration-200">
+                  <p className="text-gray-600 text-sm mb-4">Upload new data to get fresh action cards.</p>
+                  <Link href="/upload" className="inline-block bg-blue-600 hover:bg-blue-500 text-white font-bold px-5 py-2.5 rounded-xl text-sm transition">
                     Upload data
                   </Link>
                 </div>
               ) : (
                 <div className="space-y-2">
-                  {filtered.map((insight, i) => {
+                  {filtered.map((insight) => {
                     const cfg = priorityConfig[insight.priority];
                     const isExpanded = expanded === insight.id;
                     return (
@@ -319,27 +275,30 @@ export default function DashboardClient({ insights, goals, stats, userName, reco
                                   {cfg.label}
                                 </span>
                                 <span className="text-xs text-gray-600 bg-white/4 px-2 py-0.5 rounded-full">{insight.category}</span>
-                                {insight.metric && (
-                                  <span className="text-xs text-blue-400 font-black ml-auto">{insight.metric}</span>
-                                )}
+                                {insight.metric && <span className="text-xs text-blue-400 font-black ml-auto">{insight.metric}</span>}
                               </div>
                               <h3 className="text-white font-bold text-sm leading-snug">{insight.title}</h3>
-                              {isExpanded && <p className="text-gray-500 text-xs leading-relaxed mt-2">{insight.body}</p>}
-                              {!isExpanded && <p className="text-gray-700 text-xs mt-0.5">Tap to expand</p>}
+                              {isExpanded && (
+                                <div className="mt-3 space-y-2">
+                                  <p className="text-gray-500 text-xs leading-relaxed">{insight.body}</p>
+                                  <div className="bg-blue-500/8 border border-blue-500/15 rounded-xl px-3 py-2">
+                                    <p className="text-blue-400 text-xs font-bold">ACTION REQUIRED</p>
+                                    <p className="text-gray-400 text-xs mt-0.5">{insight.body.split(".")[0]}. Do this today.</p>
+                                  </div>
+                                </div>
+                              )}
+                              {!isExpanded && <p className="text-gray-700 text-xs mt-0.5">Tap to see action</p>}
                             </div>
                             <div className="flex items-center gap-1.5 flex-shrink-0">
                               <button
-                                onClick={(e) => handleDismiss(insight.id, e)}
+                                onClick={e => handleDismiss(insight.id, e)}
                                 className="opacity-0 group-hover:opacity-100 w-6 h-6 rounded-lg flex items-center justify-center text-gray-600 hover:text-gray-300 hover:bg-white/8 transition-all duration-200"
                               >
                                 <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
                                   <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
                                 </svg>
                               </button>
-                              <svg
-                                className={"w-4 h-4 text-gray-600 transition-all duration-300 " + (isExpanded ? "rotate-180 text-blue-400" : "group-hover:text-gray-400")}
-                                fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}
-                              >
+                              <svg className={"w-4 h-4 text-gray-600 transition-all duration-300 " + (isExpanded ? "rotate-180 text-blue-400" : "group-hover:text-gray-400")} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                                 <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
                               </svg>
                             </div>
@@ -352,17 +311,17 @@ export default function DashboardClient({ insights, goals, stats, userName, reco
               )}
             </div>
 
-            {/* Right panel */}
+            {/* Right sidebar */}
             <div className="space-y-4">
               <div className="bg-[#0d0d18] border border-white/6 rounded-2xl p-5">
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="text-white font-black text-sm">Goals</h3>
-                  <Link href="/goals" className="text-blue-400 hover:text-blue-300 text-xs font-bold transition-colors duration-200">View all →</Link>
+                  <Link href="/goals" className="text-blue-400 hover:text-blue-300 text-xs font-bold transition-colors">View all →</Link>
                 </div>
                 {topGoals.length === 0 ? (
                   <div className="text-center py-4">
                     <p className="text-gray-600 text-xs mb-3">No active goals yet.</p>
-                    <Link href="/goals" className="text-blue-400 text-xs font-bold hover:text-blue-300">Create a goal →</Link>
+                    <Link href="/goals" className="text-blue-400 text-xs font-bold hover:text-blue-300 transition-colors">Create a goal →</Link>
                   </div>
                 ) : (
                   <div className="space-y-4">
@@ -415,6 +374,78 @@ export default function DashboardClient({ insights, goals, stats, userName, reco
                   ))}
                 </div>
               </div>
+            </div>
+          </div>
+        )}
+
+        {/* Revenue Recovery Tab */}
+        {activeTab === "revenue" && (
+          <div className={"transition-all duration-500 " + (mounted ? "opacity-100" : "opacity-0")}>
+            {!hasData ? (
+              <div className="bg-[#0d0d18] border border-white/6 border-dashed rounded-2xl p-16 text-center">
+                <div className="text-4xl mb-3">💰</div>
+                <h3 className="text-white font-bold mb-2">Upload data to see revenue recovery</h3>
+                <p className="text-gray-600 text-sm mb-4">We need your sales data to calculate how much revenue you are leaving on the table.</p>
+                <Link href="/upload" className="inline-block bg-blue-600 hover:bg-blue-500 text-white font-bold px-5 py-2.5 rounded-xl text-sm transition">Upload data</Link>
+              </div>
+            ) : (
+              <RevenueIntelligence records={records} />
+            )}
+          </div>
+        )}
+
+        {/* Rep Matrix Tab */}
+        {activeTab === "reps" && (
+          <div className={"transition-all duration-500 " + (mounted ? "opacity-100" : "opacity-0")}>
+            {!hasData ? (
+              <div className="bg-[#0d0d18] border border-white/6 border-dashed rounded-2xl p-16 text-center">
+                <div className="text-4xl mb-3">👥</div>
+                <h3 className="text-white font-bold mb-2">Upload data to see rep comparison</h3>
+                <Link href="/upload" className="inline-block bg-blue-600 hover:bg-blue-500 text-white font-bold px-5 py-2.5 rounded-xl text-sm transition mt-4">Upload data</Link>
+              </div>
+            ) : (
+              <RepMatrix records={records} />
+            )}
+          </div>
+        )}
+
+        {/* Territory Tab */}
+        {activeTab === "territory" && (
+          <div className={"transition-all duration-500 " + (mounted ? "opacity-100" : "opacity-0")}>
+            {!hasData ? (
+              <div className="bg-[#0d0d18] border border-white/6 border-dashed rounded-2xl p-16 text-center">
+                <div className="text-4xl mb-3">🗺️</div>
+                <h3 className="text-white font-bold mb-2">Upload data to see territory analysis</h3>
+                <Link href="/upload" className="inline-block bg-blue-600 hover:bg-blue-500 text-white font-bold px-5 py-2.5 rounded-xl text-sm transition mt-4">Upload data</Link>
+              </div>
+            ) : (
+              <TerritoryMap records={records} />
+            )}
+          </div>
+        )}
+
+        {/* Analytics Tab */}
+        {activeTab === "analytics" && (
+          <div className={"grid md:grid-cols-2 gap-4 transition-all duration-500 " + (mounted ? "opacity-100" : "opacity-0")}>
+            <div className="bg-[#0d0d18] border border-white/6 rounded-2xl p-5">
+              <h3 className="text-white font-bold text-sm mb-4">Close Rate by Time of Day</h3>
+              <TimeOfDayChart records={records} />
+            </div>
+            <div className="bg-[#0d0d18] border border-white/6 rounded-2xl p-5">
+              <h3 className="text-white font-bold text-sm mb-4">Rep Performance</h3>
+              <RepPerformanceChart records={records} />
+            </div>
+            <div className="bg-[#0d0d18] border border-white/6 rounded-2xl p-5">
+              <h3 className="text-white font-bold text-sm mb-4">Revenue Over Time</h3>
+              <RevenueOverTimeChart records={records} />
+            </div>
+            <div className="bg-[#0d0d18] border border-white/6 rounded-2xl p-5">
+              <h3 className="text-white font-bold text-sm mb-4">Sales Funnel</h3>
+              <SalesFunnelChart records={records} />
+            </div>
+            <div className="bg-[#0d0d18] border border-white/6 rounded-2xl p-5 md:col-span-2">
+              <h3 className="text-white font-bold text-sm mb-4">Top ZIPs by Close Rate</h3>
+              <TopZipsChart records={records} />
             </div>
           </div>
         )}
