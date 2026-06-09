@@ -99,7 +99,6 @@ function StatCard({ label, value, sub, icon, color, prefix = "", suffix = "" }: 
 
 const TABS = [
   { id: "actions", label: "Action Cards" },
-  { id: "revenue", label: "Revenue Recovery" },
   { id: "reps", label: "Rep Matrix" },
   { id: "territory", label: "Territory" },
   { id: "analytics", label: "Analytics" },
@@ -196,6 +195,12 @@ export default function DashboardClient({ insights, goals, stats, userName, reco
           </div>
         </div>
 
+{/* Revenue Recovery — always visible */}
+{hasData && (
+  <div className={"transition-all duration-700 delay-150 " + (mounted ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4")}>
+    <RevenueIntelligence records={records} />
+  </div>
+)}
         {/* Tabs */}
         <div className={"flex items-center gap-1 bg-[#0d0d18] border border-white/6 rounded-xl p-1 mb-6 overflow-x-auto transition-all duration-700 delay-200 " + (mounted ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4")}>
           {TABS.map(tab => (
@@ -378,21 +383,7 @@ export default function DashboardClient({ insights, goals, stats, userName, reco
           </div>
         )}
 
-        {/* Revenue Recovery Tab */}
-        {activeTab === "revenue" && (
-          <div className={"transition-all duration-500 " + (mounted ? "opacity-100" : "opacity-0")}>
-            {!hasData ? (
-              <div className="bg-[#0d0d18] border border-white/6 border-dashed rounded-2xl p-16 text-center">
-                <div className="text-4xl mb-3">💰</div>
-                <h3 className="text-white font-bold mb-2">Upload data to see revenue recovery</h3>
-                <p className="text-gray-600 text-sm mb-4">We need your sales data to calculate how much revenue you are leaving on the table.</p>
-                <Link href="/upload" className="inline-block bg-blue-600 hover:bg-blue-500 text-white font-bold px-5 py-2.5 rounded-xl text-sm transition">Upload data</Link>
-              </div>
-            ) : (
-              <RevenueIntelligence records={records} />
-            )}
-          </div>
-        )}
+        
 
         {/* Rep Matrix Tab */}
         {activeTab === "reps" && (
