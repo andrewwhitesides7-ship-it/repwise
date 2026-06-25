@@ -4,54 +4,93 @@ import React, { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 
 /* ------------------------------------------------------------------ *
- * SalesWise — landing page  (app/page.tsx)
- * Style: Bauhaus, kinetic. Geometric primitives, primary palette,
- * bold strokes, orchestrated motion. Respects prefers-reduced-motion.
- * Palette: paper #F3EEE2  ink #15120D  red #E63327  blue #2A4BAE  yellow #F4C20D
+ * Meridian — landing page  (app/page.tsx)
+ * Style: futuristic Apple. Light grey field, liquid-glass panels,
+ * SF Pro type, one cool gradient accent. Signature element: a glowing
+ * "meridian" line that draws down the page as you scroll, connecting
+ * the Connect → Diagnose → Deploy → Operate sequence.
+ * Respects prefers-reduced-motion.
  * ------------------------------------------------------------------ */
 
-type FixKey = "speed" | "coaching" | "followup";
+/* ----------------------------- CONFIG — replace these two values ---- */
+const BRAND = "Meridian";
+const CALENDLY_URL = "https://calendly.com/your-handle/meridian-demo"; // ← your real Calendly link
+const CONTACT_EMAIL = "hello@trymeridian.com"; // ← your real inbox
+/* ------------------------------------------------------------------- */
 
-const SAMPLE_REPS = [
-  { rep: "Michael Chang", leads: 60, respMin: 8, closed: 18 },
-  { rep: "Sarah Jenkins", leads: 64, respMin: 22, closed: 14 },
-  { rep: "Sophia Martinez", leads: 58, respMin: 47, closed: 9 },
-  { rep: "Alex Rivera", leads: 70, respMin: 95, closed: 9 },
-  { rep: "Emma Watson", leads: 55, respMin: 180, closed: 6 },
-  { rep: "David Miller", leads: 52, respMin: 240, closed: 4 },
+type Step = { k: string; n: string; eyebrow: string; title: string; body: string };
+
+const STEPS: Step[] = [
+  {
+    k: "connect",
+    n: "01",
+    eyebrow: "Connect",
+    title: "Bring your business data",
+    body: "Leads, jobs, calls, quotes, invoices, schedules — exported however you have it. Messy spreadsheets are fine. Meridian reads it, no cleanup from you.",
+  },
+  {
+    k: "diagnose",
+    n: "02",
+    eyebrow: "Diagnose",
+    title: "Find where revenue leaks out",
+    body: "The engine pinpoints exactly where money and hours disappear: leads never answered, quotes never chased, follow-ups that never happened, capacity sitting idle.",
+  },
+  {
+    k: "deploy",
+    n: "03",
+    eyebrow: "Deploy",
+    title: "Spin up an agent to fix it",
+    body: "A modular AI agent, tuned to your data, takes over the leaking workflow — answering, qualifying, following up, scheduling, recovering. Live in days, not quarters.",
+  },
+  {
+    k: "operate",
+    n: "04",
+    eyebrow: "Operate",
+    title: "Watch it work, stay in control",
+    body: "Your dashboard shows every action the agent takes in real time. Approve, pause, or hand it more. You always see exactly what it's doing and what it recovered.",
+  },
 ];
 
-const FIXES: Record<FixKey, { title: string; monthly: number; note: string }> = {
-  speed: {
-    title: "Cut lead response time under 5 minutes",
-    monthly: 16500,
-    note: "Your slowest reps answer leads hours late and close at a third the rate. SalesWise auto-routes and pings them the second a lead lands.",
+const FINDINGS = [
+  {
+    tag: "Revenue leak",
+    title: "1 in 3 leads never gets a reply",
+    body: "Calls missed after hours, web forms that sit in an inbox. The agent answers and qualifies every one in seconds — around the clock.",
   },
-  coaching: {
-    title: "Coach the bottom third to team baseline",
-    monthly: 19500,
-    note: "Three reps close well below the team rate on the same lead volume — calculated from your own numbers, with the play to fix it.",
+  {
+    tag: "System gap",
+    title: "Quotes go out and go quiet",
+    body: "No second touch, no third. Won work slips to whoever followed up first. Meridian runs the cadence automatically until they book or decline.",
   },
-  followup: {
-    title: "Auto-sequence warm leads that go cold",
-    monthly: 16500,
-    note: "“Call me tomorrow” leads never get the second touch. SalesWise builds the cadence and runs it for you.",
+  {
+    tag: "Hidden capacity",
+    title: "Empty slots you never filled",
+    body: "Cancellations and gaps in the calendar are lost margin. The agent backfills from your waitlist and dormant leads before the day starts.",
   },
-};
-
-const FUNNEL = [
-  { key: "leads", label: "Leads in", count: 1000, width: 100, leak: 0, usd: 0, fix: "" },
-  { key: "fast", label: "Reached in time", count: 680, width: 72, leak: 320, usd: 96000, fix: "Speed-to-lead alerts fire the instant a lead lands, and auto-reassign if it's ignored." },
-  { key: "qual", label: "Qualified", count: 520, width: 56, leak: 160, usd: 64000, fix: "Tighter discovery plays, calculated from the reps who already convert this stage." },
-  { key: "won", label: "Closed", count: 190, width: 40, leak: 330, usd: 132000, fix: "Auto follow-up sequences re-touch every warm lead so none go cold." },
 ];
 
-const fmtK = (n: number) => `$${Math.round(n / 1000)}K`;
-const fmtResp = (m: number) => (m < 90 ? `${m}m` : `${(m / 60).toFixed(1)}h`);
+const AGENTS = [
+  { title: "Lead Response", body: "Answers, qualifies, and books every new lead in seconds — 24/7, across phone, text, and web." },
+  { title: "Follow-Up & Reactivation", body: "Works “get back to me later” and dormant leads on a cadence until they convert or opt out." },
+  { title: "Scheduling & Dispatch", body: "Books, confirms, and reshuffles the calendar — and fills gaps the moment they open." },
+  { title: "Quote & Invoice", body: "Chases open quotes and unpaid invoices on a schedule so cash stops slipping through." },
+  { title: "Reviews & Reputation", body: "Requests a review after every completed job, routes the happy ones, flags the unhappy ones." },
+  { title: "Custom workflow", body: "Have a workflow that bleeds time? We tune a module to your data and plug it into the same dashboard." },
+];
 
-/* -------------------------------------------------- animation helpers */
+const INCLUDED = [
+  "Full diagnostic of where your business leaks revenue and time",
+  "One agent built and tuned to your data, live in days",
+  "Real-time dashboard of every action the agent takes",
+  "Ongoing tuning, monitoring, and support",
+  "Add agents as you grow — same dashboard, same control",
+];
 
-function useInView<T extends HTMLElement>(threshold = 0.15) {
+/* -------------------------------------------------- helpers */
+
+const clamp = (n: number, lo = 0, hi = 1) => Math.min(hi, Math.max(lo, n));
+
+function useInView<T extends HTMLElement>(threshold = 0.18) {
   const ref = useRef<T>(null);
   const [inView, setInView] = useState(false);
   useEffect(() => {
@@ -76,197 +115,174 @@ function Reveal({
   children,
   className = "",
   delay = 0,
-  pop = false,
 }: {
   children: React.ReactNode;
   className?: string;
   delay?: number;
-  pop?: boolean;
 }) {
   const { ref, inView } = useInView<HTMLDivElement>();
   return (
     <div
       ref={ref}
       style={{ transitionDelay: `${delay}ms` }}
-      className={`${pop ? "reveal-pop" : "reveal"} ${inView ? "in" : ""} ${className}`}
+      className={`reveal ${inView ? "in" : ""} ${className}`}
     >
       {children}
     </div>
   );
 }
 
-function useCountUp(target: number, ms = 700) {
-  const [v, setV] = useState(target);
-  const from = useRef(target);
+/* -------------------------------------------------- scroll-driven meridian spine */
+
+function Journey({ onBook }: { onBook: () => void }) {
+  const spineRef = useRef<HTMLDivElement>(null);
+  const [p, setP] = useState(0);
+
   useEffect(() => {
-    const start = from.current;
-    const t0 = performance.now();
-    let raf = 0;
-    const tick = (t: number) => {
-      const p = Math.min(1, (t - t0) / ms);
-      const eased = 1 - Math.pow(1 - p, 3);
-      setV(start + (target - start) * eased);
-      if (p < 1) raf = requestAnimationFrame(tick);
-      else from.current = target;
+    const onScroll = () => {
+      const el = spineRef.current;
+      if (!el) return;
+      const r = el.getBoundingClientRect();
+      const vh = window.innerHeight || 1;
+      // fill tracks toward the middle of the viewport as the section passes through
+      setP(clamp((vh * 0.5 - r.top) / r.height));
     };
-    raf = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(raf);
-  }, [target, ms]);
-  return v;
-}
+    window.addEventListener("scroll", onScroll, { passive: true });
+    window.addEventListener("resize", onScroll);
+    onScroll();
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+      window.removeEventListener("resize", onScroll);
+    };
+  }, []);
 
-/* -------------------------------------------------- interactive funnel */
-
-function Funnel() {
-  const { ref, inView } = useInView<HTMLDivElement>(0.25);
-  const [active, setActive] = useState<string | null>("won");
-  const [plugged, setPlugged] = useState<Record<string, boolean>>({});
-
-  const recovered = FUNNEL.reduce((s, st) => s + (plugged[st.key] ? st.usd : 0), 0);
-  const animatedRecovered = useCountUp(recovered);
-  const activeStage = FUNNEL.find((s) => s.key === active) || null;
+  const activeIdx = Math.min(STEPS.length - 1, Math.floor(p * STEPS.length + 0.15));
 
   return (
-    <div ref={ref}>
-      {/* running recovered tally */}
-      <div className="flex flex-wrap items-end justify-between gap-4 mb-8">
-        <div className="font-['Space_Mono'] text-xs font-bold uppercase tracking-widest text-[#2A4BAE]">
-          Click a stage · seal the leak
-        </div>
-        <div className="font-['Space_Mono'] text-sm font-bold">
-          Recovered:{" "}
-          <span className="bg-[#F4C20D] px-2 py-0.5">{fmtK(animatedRecovered)}</span>
-        </div>
-      </div>
+    <div ref={spineRef} className="relative max-w-3xl mx-auto">
+      {/* dim track */}
+      <div className="meridian-track" aria-hidden />
+      {/* animated fill */}
+      <div className="meridian-fill" style={{ height: `${p * 100}%` }} aria-hidden />
 
-      <div className="space-y-4">
-        {FUNNEL.map((st, i) => {
-          const isActive = active === st.key;
-          const isPlugged = !!plugged[st.key];
+      <div className="relative space-y-16 md:space-y-24">
+        {STEPS.map((s, i) => {
+          const on = i <= activeIdx;
           return (
-            <div key={st.key} className="relative">
-              <button
-                onClick={() => setActive(st.key)}
-                className="block mx-auto group"
-                style={{
-                  width: inView ? `${st.width}%` : "0%",
-                  transition: `width .9s cubic-bezier(.2,.8,.2,1) ${i * 90}ms`,
-                }}
-                aria-label={`${st.label}: ${st.count}`}
-              >
-                <div
-                  className={`border-[3px] border-[#15120D] px-4 py-4 flex items-center justify-between transition-colors ${
-                    isActive ? "bg-[#2A4BAE] text-white" : "bg-white text-[#15120D]"
-                  } group-hover:-translate-y-0.5 transition-transform`}
-                >
-                  <span className="font-bold text-sm truncate">{st.label}</span>
-                  <span className="font-['Space_Mono'] font-bold text-sm">{st.count}</span>
-                </div>
-              </button>
+            <div key={s.k} className="relative flex flex-col items-center text-center">
+              {/* node */}
+              <div className={`node ${on ? "on" : ""}`} aria-hidden>
+                <span className="node-core" />
+              </div>
 
-              {/* leak indicator */}
-              {st.leak > 0 && (
-                <div
-                  className={`absolute right-0 top-1/2 -translate-y-1/2 translate-x-[105%] hidden lg:flex items-center gap-2 transition-opacity ${
-                    isPlugged ? "opacity-40" : "opacity-100"
-                  }`}
-                >
-                  <div className="relative w-4 h-10">
-                    {!isPlugged &&
-                      inView &&
-                      [0, 1, 2].map((d) => (
-                        <span
-                          key={d}
-                          aria-hidden
-                          className="drip absolute left-1 w-2 h-2 bg-[#E63327]"
-                          style={{ animationDelay: `${d * 0.7}s` }}
-                        />
-                      ))}
-                  </div>
-                  <span
-                    className={`font-['Space_Mono'] text-xs font-bold whitespace-nowrap ${
-                      isPlugged ? "line-through text-[#6b6557]" : "text-[#E63327]"
-                    }`}
-                  >
-                    {isPlugged ? "sealed" : `−${st.leak} · ${fmtK(st.usd)}`}
+              <Reveal className="glass rounded-[28px] px-7 py-8 md:px-10 md:py-10 mt-7 w-full">
+                <div className="flex items-center justify-center gap-3">
+                  <span className="font-mono text-xs tracking-[0.2em] text-[var(--muted)]">{s.n}</span>
+                  <span className="h-3 w-px bg-black/15" />
+                  <span className="font-mono text-xs tracking-[0.2em] uppercase grad-text font-semibold">
+                    {s.eyebrow}
                   </span>
                 </div>
-              )}
+                <h3 className="mt-4 text-2xl md:text-3xl font-semibold tracking-tight">{s.title}</h3>
+                <p className="mt-3 text-[15px] md:text-base leading-relaxed text-[var(--muted)] max-w-xl mx-auto">
+                  {s.body}
+                </p>
+                {i === STEPS.length - 1 && (
+                  <button onClick={onBook} className="btn-primary mt-7 inline-flex">
+                    Book a demo
+                  </button>
+                )}
+              </Reveal>
             </div>
           );
         })}
       </div>
-
-      {/* detail panel */}
-      {activeStage && activeStage.leak > 0 && (
-        <div key={activeStage.key} className="rise mt-8 bg-[#15120D] text-[#F3EEE2] border-[3px] border-[#15120D] p-6 md:p-8 flex flex-col md:flex-row md:items-center gap-5">
-          <div className="flex-1">
-            <div className="font-['Space_Mono'] text-xs font-bold uppercase tracking-widest text-[#F4C20D]">
-              {activeStage.label} — leaking {fmtK(activeStage.usd)}/mo
-            </div>
-            <p className="mt-2 text-sm leading-relaxed opacity-90">{activeStage.fix}</p>
-          </div>
-          <button
-            onClick={() =>
-              setPlugged((p) => ({ ...p, [activeStage.key]: !p[activeStage.key] }))
-            }
-            className={`shrink-0 text-sm font-bold px-6 py-3 border-2 transition ${
-              plugged[activeStage.key]
-                ? "bg-[#F4C20D] text-[#15120D] border-[#F4C20D]"
-                : "bg-[#E63327] text-white border-[#E63327] hover:bg-white hover:text-[#15120D] hover:border-white"
-            }`}
-          >
-            {plugged[activeStage.key] ? "✓ Plugged" : "Plug this leak"}
-          </button>
-        </div>
-      )}
     </div>
   );
 }
 
-/* -------------------------------------------------- marquee */
+/* -------------------------------------------------- glass dashboard preview */
 
-function Marquee() {
-  const items = ["FIND THE LEAK", "FIX THE LEAK", "PLUG THE LEAK"];
-  const Seq = () => (
-    <div className="flex items-center">
-      {items.concat(items).map((t, i) => (
-        <span key={i} className="flex items-center">
-          <span className="px-6 font-extrabold tracking-tight text-lg">{t}</span>
-          <span aria-hidden className="flex items-center gap-1.5 px-2">
-            <span className="w-3 h-3 rounded-full bg-[#E63327]" />
-            <span className="w-0 h-0 border-l-[6px] border-r-[6px] border-b-[10px] border-l-transparent border-r-transparent border-b-[#F4C20D]" />
-            <span className="w-3 h-3 bg-[#2A4BAE]" />
-          </span>
-        </span>
-      ))}
-    </div>
-  );
+function DashboardPreview() {
+  const rows = [
+    { t: "09:14:02", a: "Answered + qualified inbound lead", m: "Northgate Landscaping", tone: "ok" },
+    { t: "09:13:41", a: "Booked estimate · Thu 2:00 PM", m: "Auto-confirmed", tone: "ok" },
+    { t: "09:11:30", a: "Follow-up sent on open quote", m: "Quote #4471 · $3,200", tone: "accent" },
+    { t: "09:08:55", a: "Reactivated dormant lead", m: "Quiet 38 days", tone: "accent" },
+    { t: "09:05:12", a: "Invoice reminder delivered", m: "Invoice #2210 · 14 days late", tone: "warn" },
+  ];
   return (
-    <div className="border-y-[3px] border-[#15120D] bg-[#15120D] text-[#F3EEE2] overflow-hidden py-3">
-      <div className="marquee-track flex w-max">
-        <Seq />
-        <Seq />
+    <div className="glass glass-lift rounded-[28px] p-2 md:p-3">
+      <div className="rounded-[22px] bg-white/55 border border-white/60 overflow-hidden">
+        {/* window bar */}
+        <div className="flex items-center gap-2 px-5 py-3 border-b border-black/5">
+          <span className="w-2.5 h-2.5 rounded-full bg-[#ff5f57]" />
+          <span className="w-2.5 h-2.5 rounded-full bg-[#febc2e]" />
+          <span className="w-2.5 h-2.5 rounded-full bg-[#28c840]" />
+          <span className="ml-3 font-mono text-[11px] text-[var(--muted)]">meridian · lead response agent</span>
+          <span className="ml-auto inline-flex items-center gap-1.5 font-mono text-[11px] text-[var(--muted)]">
+            <span className="live-dot" /> live
+          </span>
+        </div>
+
+        {/* stat strip */}
+        <div className="grid grid-cols-3 divide-x divide-black/5 border-b border-black/5">
+          {[
+            { v: "42", l: "Leads handled today" },
+            { v: "11s", l: "Avg response" },
+            { v: "$18.4K", l: "Recovered this week" },
+          ].map((s) => (
+            <div key={s.l} className="px-5 py-4">
+              <div className="text-xl md:text-2xl font-semibold tracking-tight tabular-nums">{s.v}</div>
+              <div className="mt-0.5 text-[11px] text-[var(--muted)]">{s.l}</div>
+            </div>
+          ))}
+        </div>
+
+        {/* activity feed */}
+        <div className="divide-y divide-black/5">
+          {rows.map((r, i) => (
+            <div key={i} className="flex items-center gap-4 px-5 py-3">
+              <span className="font-mono text-[11px] text-[var(--muted)] w-16 shrink-0">{r.t}</span>
+              <span
+                className={`w-1.5 h-1.5 rounded-full shrink-0 ${
+                  r.tone === "warn" ? "bg-[#e0922f]" : r.tone === "accent" ? "bg-[var(--accent)]" : "bg-[#28c840]"
+                }`}
+              />
+              <span className="text-sm font-medium truncate">{r.a}</span>
+              <span className="ml-auto text-[12px] text-[var(--muted)] truncate hidden sm:block">{r.m}</span>
+            </div>
+          ))}
+        </div>
       </div>
     </div>
+  );
+}
+
+/* -------------------------------------------------- mark */
+
+function Mark({ size = 22 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden>
+      <circle cx="12" cy="12" r="9" stroke="url(#mg)" strokeWidth="1.6" />
+      <line x1="12" y1="2.5" x2="12" y2="21.5" stroke="url(#mg)" strokeWidth="1.6" />
+      <circle cx="12" cy="12" r="2.1" fill="url(#mg)" />
+      <defs>
+        <linearGradient id="mg" x1="0" y1="0" x2="24" y2="24">
+          <stop stopColor="#0a84ff" />
+          <stop offset="1" stopColor="#6a5cff" />
+        </linearGradient>
+      </defs>
+    </svg>
   );
 }
 
 /* -------------------------------------------------- page */
 
 export default function Landing() {
-  const [loaded, setLoaded] = useState(false);
-  const [scanning, setScanning] = useState(false);
-  const [fixes, setFixes] = useState<Record<FixKey, boolean>>({
-    speed: true,
-    coaching: true,
-    followup: false,
-  });
-
-  const heroRef = useRef<HTMLElement>(null);
   const progRef = useRef<HTMLDivElement>(null);
 
-  // scroll progress bar
+  // top scroll-progress bar
   useEffect(() => {
     const onScroll = () => {
       const h = document.documentElement;
@@ -278,563 +294,453 @@ export default function Landing() {
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
-  // hero cursor parallax
-  const onHeroMove = (e: React.MouseEvent) => {
-    const el = heroRef.current;
-    if (!el) return;
-    const r = el.getBoundingClientRect();
-    el.style.setProperty("--mx", String((e.clientX - r.left) / r.width - 0.5));
-    el.style.setProperty("--my", String((e.clientY - r.top) / r.height - 0.5));
-  };
-  const onHeroLeave = () => {
-    const el = heroRef.current;
-    if (!el) return;
-    el.style.setProperty("--mx", "0");
-    el.style.setProperty("--my", "0");
+  // load Calendly assets once
+  useEffect(() => {
+    const css = document.createElement("link");
+    css.rel = "stylesheet";
+    css.href = "https://assets.calendly.com/assets/external/widget.css";
+    document.head.appendChild(css);
+    const s = document.createElement("script");
+    s.src = "https://assets.calendly.com/assets/external/widget.js";
+    s.async = true;
+    document.body.appendChild(s);
+  }, []);
+
+  const openDemo = () => {
+    const w = window as unknown as { Calendly?: { initPopupWidget: (o: { url: string }) => void } };
+    if (w.Calendly) w.Calendly.initPopupWidget({ url: CALENDLY_URL });
+    else window.open(CALENDLY_URL, "_blank");
   };
 
   const scrollTo = (id: string) =>
     document.getElementById(id)?.scrollIntoView({ behavior: "smooth" });
 
-  const runAudit = () => {
-    setScanning(true);
-    setTimeout(() => {
-      setLoaded(true);
-      setScanning(false);
-      scrollTo("audit");
-    }, 800);
-  };
-
-  const toggleFix = (key: FixKey) =>
-    setFixes((prev) => ({ ...prev, [key]: !prev[key] }));
-
-  const monthlyRecovered = (Object.keys(FIXES) as FixKey[]).reduce(
-    (sum, k) => sum + (fixes[k] ? FIXES[k].monthly : 0),
-    0
-  );
-  const annualRecovered = useCountUp(monthlyRecovered * 12);
-
   return (
-    <div className="min-h-screen bg-[#F3EEE2] text-[#15120D] font-['Poppins'] antialiased overflow-x-hidden">
+    <div className="relative min-h-screen text-[var(--ink)] antialiased overflow-x-hidden">
       <link rel="preconnect" href="https://fonts.googleapis.com" />
       <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
       <link
-        href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700;800&family=Space+Mono:wght@400;700&display=swap"
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap"
         rel="stylesheet"
       />
 
       <style jsx global>{`
+        :root {
+          --ink: #1d1d1f;
+          --muted: #6e6e73;
+          --field: #f5f5f7;
+          --accent: #0a84ff;
+          --accent2: #6a5cff;
+        }
+        body {
+          font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text",
+            "Inter", system-ui, sans-serif;
+          letter-spacing: -0.01em;
+        }
+        .font-mono {
+          font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+          letter-spacing: 0;
+        }
+        .grad-text {
+          background: linear-gradient(120deg, var(--accent), var(--accent2));
+          -webkit-background-clip: text;
+          background-clip: text;
+          color: transparent;
+        }
+
+        /* ---- liquid glass ---- */
+        .glass {
+          position: relative;
+          background: linear-gradient(135deg, rgba(255, 255, 255, 0.72), rgba(255, 255, 255, 0.42));
+          backdrop-filter: blur(22px) saturate(180%);
+          -webkit-backdrop-filter: blur(22px) saturate(180%);
+          border: 1px solid rgba(255, 255, 255, 0.7);
+          box-shadow: 0 10px 40px rgba(20, 24, 40, 0.08),
+            inset 0 1px 0 rgba(255, 255, 255, 0.9), inset 0 -1px 0 rgba(255, 255, 255, 0.25);
+        }
+        .glass::before {
+          content: "";
+          position: absolute;
+          inset: 0;
+          border-radius: inherit;
+          background: linear-gradient(135deg, rgba(255, 255, 255, 0.55), transparent 42%);
+          pointer-events: none;
+        }
+        .glass-lift {
+          transition: transform 0.4s cubic-bezier(0.2, 0.8, 0.2, 1),
+            box-shadow 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
+        }
+        .glass-lift:hover {
+          transform: translateY(-4px);
+          box-shadow: 0 22px 60px rgba(20, 24, 40, 0.13),
+            inset 0 1px 0 rgba(255, 255, 255, 0.9);
+        }
+
+        /* ---- buttons ---- */
+        .btn-primary {
+          align-items: center;
+          gap: 0.5rem;
+          font-size: 0.95rem;
+          font-weight: 600;
+          color: #fff;
+          padding: 0.85rem 1.6rem;
+          border-radius: 999px;
+          background: linear-gradient(120deg, var(--accent), var(--accent2));
+          box-shadow: 0 8px 24px rgba(10, 132, 255, 0.32), inset 0 1px 0 rgba(255, 255, 255, 0.4);
+          transition: transform 0.2s ease, box-shadow 0.2s ease, filter 0.2s ease;
+        }
+        .btn-primary:hover {
+          transform: translateY(-1px);
+          filter: brightness(1.05);
+          box-shadow: 0 12px 30px rgba(10, 132, 255, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.5);
+        }
+        .btn-primary:active {
+          transform: translateY(0);
+        }
+        .btn-ghost {
+          display: inline-flex;
+          align-items: center;
+          gap: 0.4rem;
+          font-size: 0.95rem;
+          font-weight: 600;
+          color: var(--ink);
+          padding: 0.85rem 1.4rem;
+          border-radius: 999px;
+          background: rgba(255, 255, 255, 0.5);
+          backdrop-filter: blur(12px);
+          border: 1px solid rgba(0, 0, 0, 0.07);
+          transition: background 0.2s ease, transform 0.2s ease;
+        }
+        .btn-ghost:hover {
+          background: rgba(255, 255, 255, 0.85);
+          transform: translateY(-1px);
+        }
+
+        /* ---- meridian spine ---- */
+        .meridian-track,
+        .meridian-fill {
+          position: absolute;
+          left: 50%;
+          top: 0;
+          transform: translateX(-50%);
+          width: 2px;
+          border-radius: 2px;
+        }
+        .meridian-track {
+          height: 100%;
+          background: rgba(0, 0, 0, 0.08);
+        }
+        .meridian-fill {
+          background: linear-gradient(180deg, var(--accent), var(--accent2));
+          box-shadow: 0 0 16px rgba(10, 132, 255, 0.55);
+          transition: height 0.15s linear;
+        }
+        .node {
+          position: relative;
+          width: 18px;
+          height: 18px;
+          border-radius: 999px;
+          background: var(--field);
+          border: 2px solid rgba(0, 0, 0, 0.12);
+          display: grid;
+          place-items: center;
+          transition: border-color 0.4s ease, box-shadow 0.4s ease;
+          z-index: 1;
+        }
+        .node-core {
+          width: 7px;
+          height: 7px;
+          border-radius: 999px;
+          background: rgba(0, 0, 0, 0.15);
+          transition: background 0.4s ease, transform 0.4s ease;
+        }
+        .node.on {
+          border-color: var(--accent);
+          box-shadow: 0 0 0 5px rgba(10, 132, 255, 0.12), 0 0 18px rgba(10, 132, 255, 0.4);
+        }
+        .node.on .node-core {
+          background: linear-gradient(120deg, var(--accent), var(--accent2));
+          transform: scale(1.15);
+        }
+
+        .live-dot {
+          width: 7px;
+          height: 7px;
+          border-radius: 999px;
+          background: #28c840;
+          box-shadow: 0 0 0 0 rgba(40, 200, 64, 0.5);
+          animation: pulse 2s infinite;
+        }
+
+        /* ---- reveal ---- */
         .reveal {
           opacity: 0;
-          transform: translateY(26px);
-          transition: opacity 0.6s cubic-bezier(0.2, 0.8, 0.2, 1),
-            transform 0.6s cubic-bezier(0.2, 0.8, 0.2, 1);
+          transform: translateY(22px);
+          transition: opacity 0.7s cubic-bezier(0.2, 0.8, 0.2, 1),
+            transform 0.7s cubic-bezier(0.2, 0.8, 0.2, 1);
         }
         .reveal.in {
           opacity: 1;
           transform: none;
         }
-        .reveal-pop {
-          opacity: 0;
-          transform: scale(0.7) rotate(-6deg);
-          transition: opacity 0.55s cubic-bezier(0.2, 0.8, 0.2, 1),
-            transform 0.55s cubic-bezier(0.2, 0.8, 0.2, 1);
+
+        @keyframes pulse {
+          0% { box-shadow: 0 0 0 0 rgba(40, 200, 64, 0.5); }
+          70% { box-shadow: 0 0 0 7px rgba(40, 200, 64, 0); }
+          100% { box-shadow: 0 0 0 0 rgba(40, 200, 64, 0); }
         }
-        .reveal-pop.in {
-          opacity: 1;
-          transform: none;
-        }
-        .rise {
-          animation: rise 0.55s cubic-bezier(0.2, 0.8, 0.2, 1) both;
-        }
-        .px1 {
-          transform: translate(calc(var(--mx, 0) * 46px), calc(var(--my, 0) * 46px));
-          transition: transform 0.25s ease-out;
-        }
-        .px2 {
-          transform: translate(calc(var(--mx, 0) * -34px), calc(var(--my, 0) * 30px));
-          transition: transform 0.25s ease-out;
-        }
-        .px3 {
-          transform: translate(calc(var(--mx, 0) * 22px), calc(var(--my, 0) * -26px));
-          transition: transform 0.25s ease-out;
-        }
-        @keyframes rise {
-          from { opacity: 0; transform: translateY(22px); }
-          to { opacity: 1; transform: none; }
-        }
-        @keyframes floaty {
-          0%, 100% { transform: translateY(0) rotate(0deg); }
-          50% { transform: translateY(-16px) rotate(8deg); }
-        }
-        @keyframes spinslow { to { transform: rotate(360deg); } }
-        @keyframes marquee { to { transform: translateX(-50%); } }
-        @keyframes drip {
-          0% { transform: translateY(-6px); opacity: 0; }
-          15% { opacity: 1; }
-          100% { transform: translateY(34px); opacity: 0; }
+        @keyframes drift {
+          0%, 100% { transform: translate(0, 0) scale(1); }
+          50% { transform: translate(30px, -40px) scale(1.08); }
         }
         @media (prefers-reduced-motion: no-preference) {
-          .floaty { animation: floaty 7s ease-in-out infinite; }
-          .floaty2 { animation: floaty 9s ease-in-out infinite reverse; }
-          .spinslow { animation: spinslow 24s linear infinite; }
-          .marquee-track { animation: marquee 26s linear infinite; }
-          .drip { animation: drip 2.1s linear infinite; }
+          .blob { animation: drift 22s ease-in-out infinite; }
         }
         @media (prefers-reduced-motion: reduce) {
-          .reveal, .reveal-pop { opacity: 1 !important; transform: none !important; }
+          .reveal { opacity: 1 !important; transform: none !important; }
+          .meridian-fill { transition: none; }
+        }
+        *:focus-visible {
+          outline: 2px solid var(--accent);
+          outline-offset: 3px;
+          border-radius: 4px;
         }
       `}</style>
+
+      {/* ambient field + soft color so glass has something to refract */}
+      <div aria-hidden className="fixed inset-0 z-0 overflow-hidden" style={{ background: "var(--field)" }}>
+        <div className="blob absolute -top-32 -left-24 w-[620px] h-[620px] rounded-full" style={{ background: "#bcd4ff", opacity: 0.5, filter: "blur(130px)" }} />
+        <div className="blob absolute top-40 -right-32 w-[560px] h-[560px] rounded-full" style={{ background: "#e2d4ff", opacity: 0.45, filter: "blur(130px)", animationDelay: "-6s" }} />
+        <div className="blob absolute bottom-0 left-1/3 w-[520px] h-[520px] rounded-full" style={{ background: "#cdeede", opacity: 0.4, filter: "blur(140px)", animationDelay: "-12s" }} />
+      </div>
 
       {/* scroll progress */}
       <div
         ref={progRef}
-        className="fixed top-0 left-0 right-0 h-1 bg-[#E63327] z-[60] origin-left"
-        style={{ transform: "scaleX(0)" }}
+        className="fixed top-0 left-0 right-0 h-0.5 z-[60] origin-left"
+        style={{ transform: "scaleX(0)", background: "linear-gradient(90deg, var(--accent), var(--accent2))" }}
       />
 
-      {/* ------------------------------------------------- NAV */}
-      <nav className="sticky top-0 z-50 bg-[#F3EEE2]/90 backdrop-blur-sm border-b-[3px] border-[#15120D]">
-        <div className="max-w-6xl mx-auto px-5 h-16 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-2.5">
-            <span aria-hidden className="flex items-center gap-1">
-              <span className="w-3.5 h-3.5 rounded-full bg-[#E63327] spinslow" />
-              <span className="w-0 h-0 border-l-[7px] border-r-[7px] border-b-[12px] border-l-transparent border-r-transparent border-b-[#F4C20D]" />
-              <span className="w-3.5 h-3.5 bg-[#2A4BAE]" />
-            </span>
-            <span className="text-lg font-extrabold tracking-tight">SalesWise</span>
-          </Link>
-          <div className="flex items-center gap-5">
-            <button
-              onClick={() => scrollTo("audit")}
-              className="hidden sm:block text-sm font-semibold hover:text-[#E63327] transition"
-            >
-              See it work
-            </button>
-            <Link
-              href="/signup"
-              className="bg-[#15120D] text-[#F3EEE2] text-sm font-bold px-4 py-2 border-2 border-[#15120D] hover:bg-[#E63327] hover:border-[#E63327] transition"
-            >
-              Start free audit
+      <div className="relative z-10">
+        {/* ---------------------------------------------- NAV */}
+        <nav className="sticky top-3 z-50 px-4">
+          <div className="glass max-w-5xl mx-auto rounded-full px-5 h-14 flex items-center justify-between">
+            <Link href="/" className="flex items-center gap-2.5">
+              <Mark />
+              <span className="text-[17px] font-semibold tracking-tight">{BRAND}</span>
             </Link>
-          </div>
-        </div>
-      </nav>
-
-      {/* ------------------------------------------------- HERO */}
-      <header
-        ref={heroRef}
-        onMouseMove={onHeroMove}
-        onMouseLeave={onHeroLeave}
-        className="relative overflow-hidden border-b-[3px] border-[#15120D]"
-      >
-        <div aria-hidden className="pointer-events-none absolute inset-0">
-          <div className="px1 absolute -right-16 -top-16">
-            <div className="floaty w-72 h-72 rounded-full bg-[#E63327]" />
-          </div>
-          <div className="px2 absolute right-40 top-28 hidden md:block">
-            <div className="floaty2 w-28 h-28 bg-[#2A4BAE]" />
-          </div>
-          <div className="px3 absolute right-4 bottom-4 hidden md:block">
-            <div className="spinslow w-0 h-0 border-l-[80px] border-b-[80px] border-l-transparent border-b-[#F4C20D]" />
-          </div>
-        </div>
-
-        <div className="relative max-w-6xl mx-auto px-5 pt-20 pb-24 md:pt-28 md:pb-32">
-          <div className="rise inline-flex items-center gap-2 border-2 border-[#15120D] px-3 py-1 text-xs font-bold uppercase tracking-wider mb-8">
-            <span className="w-2 h-2 rounded-full bg-[#E63327]" /> Find the money leaking out of your funnel
-          </div>
-
-          <h1 className="text-5xl sm:text-6xl md:text-7xl font-extrabold tracking-tight leading-[0.95] max-w-3xl">
-            <span className="rise block" style={{ animationDelay: "60ms" }}>
-              Your CRM stores data.
-            </span>
-            <span className="rise block text-[#E63327]" style={{ animationDelay: "180ms" }}>
-              SalesWise recovers the cash.
-            </span>
-          </h1>
-
-          <p
-            className="rise mt-7 text-lg md:text-xl text-[#3b362d] max-w-xl font-normal leading-relaxed"
-            style={{ animationDelay: "300ms" }}
-          >
-            Upload your sales data and SalesWise pinpoints exactly where you're losing money
-            across the funnel — reps, leads, response time — hands you the fix, and can build
-            the systems to plug the gaps automatically.
-          </p>
-
-          <div className="rise mt-9 flex flex-col sm:flex-row gap-3 max-w-md" style={{ animationDelay: "420ms" }}>
-            <button
-              onClick={runAudit}
-              disabled={scanning}
-              className="flex-1 bg-[#E63327] text-white text-sm font-bold px-7 py-4 border-2 border-[#15120D] hover:bg-[#15120D] transition disabled:opacity-70 active:translate-y-0.5"
-            >
-              {scanning ? "Scanning…" : "Drop your sales CSV"}
-            </button>
-            <Link
-              href="/signup"
-              className="flex-1 text-center bg-transparent text-[#15120D] text-sm font-bold px-7 py-4 border-2 border-[#15120D] hover:bg-[#15120D] hover:text-[#F3EEE2] transition"
-            >
-              Create account
-            </Link>
-          </div>
-          <p className="rise mt-4 text-xs font-semibold text-[#6b6557] uppercase tracking-wider" style={{ animationDelay: "520ms" }}>
-            Under 2 minutes · Any spreadsheet export · First audit free
-          </p>
-        </div>
-      </header>
-
-      <Marquee />
-
-      {/* ------------------------------------------------- HOW */}
-      <section className="border-b-[3px] border-[#15120D]">
-        <div className="max-w-6xl mx-auto grid md:grid-cols-3 divide-y-[3px] md:divide-y-0 md:divide-x-[3px] divide-[#15120D]">
-          {[
-            { n: "01", t: "Upload your sales data", d: "Drag in any CSV or CRM export. We read the messy columns — reps, leads, timestamps, outcomes — so you don't clean a thing." },
-            { n: "02", t: "Find every leak in the funnel", d: "The engine pinpoints exactly where money is lost: slow lead response, under-performing reps, follow-ups that never happened." },
-            { n: "03", t: "Fix it — or let SalesWise plug it", d: "Every insight comes with the strategy and the play. For the biggest gaps, SalesWise builds the system that plugs them automatically." },
-          ].map((s, i) => (
-            <Reveal key={s.n} delay={i * 90} className="p-8 md:p-10">
-              <div className="font-['Space_Mono'] text-3xl font-bold text-[#E63327]">{s.n}</div>
-              <h3 className="mt-3 text-xl font-bold">{s.t}</h3>
-              <p className="mt-2 text-sm text-[#3b362d] leading-relaxed">{s.d}</p>
-            </Reveal>
-          ))}
-        </div>
-      </section>
-
-      {/* ------------------------------------------------- INSIGHT TYPES */}
-      <section className="border-b-[3px] border-[#15120D] py-20 px-5">
-        <div className="max-w-6xl mx-auto">
-          <Reveal>
-            <h2 className="text-3xl md:text-5xl font-extrabold tracking-tight max-w-2xl leading-tight">
-              Every insight gets a shape and a stake.
-            </h2>
-            <p className="mt-4 text-base text-[#3b362d] max-w-xl">
-              Three priorities, three primitives. You always know what's bleeding and what to fix first.
-            </p>
-          </Reveal>
-
-          <div className="mt-12 grid md:grid-cols-3 gap-5">
-            <Reveal pop delay={0}>
-              <article className="bg-white border-[3px] border-[#15120D] p-7 h-full hover:-translate-y-1 transition-transform">
-                <div aria-hidden className="w-12 h-12 rounded-full bg-[#E63327] mb-5" />
-                <div className="text-xs font-bold uppercase tracking-widest text-[#E63327]">Critical</div>
-                <p className="mt-2 font-bold leading-snug">Your slowest responders are your weakest closers.</p>
-                <p className="mt-2 text-sm text-[#3b362d] leading-relaxed">
-                  David answers leads 4 hours late and closes at 8% — a third of the team baseline. Speed-to-lead is the leak.
-                </p>
-              </article>
-            </Reveal>
-            <Reveal pop delay={120}>
-              <article className="bg-white border-[3px] border-[#15120D] p-7 h-full hover:-translate-y-1 transition-transform">
-                <div aria-hidden className="w-0 h-0 border-l-[24px] border-r-[24px] border-b-[42px] border-l-transparent border-r-transparent border-b-[#F4C20D] mb-5" />
-                <div className="text-xs font-bold uppercase tracking-widest text-[#b8900a]">Opportunity</div>
-                <p className="mt-2 font-bold leading-snug">The 2pm window closes 3x faster than 9am.</p>
-                <p className="mt-2 text-sm text-[#3b362d] leading-relaxed">
-                  Your top reps already work it. Shift the rest of the team's hours and capture the same lift.
-                </p>
-              </article>
-            </Reveal>
-            <Reveal pop delay={240}>
-              <article className="bg-white border-[3px] border-[#15120D] p-7 h-full hover:-translate-y-1 transition-transform">
-                <div aria-hidden className="w-11 h-11 bg-[#2A4BAE] mb-5" />
-                <div className="text-xs font-bold uppercase tracking-widest text-[#2A4BAE]">Pattern</div>
-                <p className="mt-2 font-bold leading-snug">“Call me tomorrow” leads almost never get called.</p>
-                <p className="mt-2 text-sm text-[#3b362d] leading-relaxed">
-                  Reps chase fresh leads instead. SalesWise can build the follow-up sequence and run it automatically.
-                </p>
-              </article>
-            </Reveal>
-          </div>
-        </div>
-      </section>
-
-      {/* ------------------------------------------------- INTERACTIVE FUNNEL */}
-      <section className="border-b-[3px] border-[#15120D] py-20 px-5 bg-white">
-        <div className="max-w-3xl mx-auto">
-          <Reveal>
-            <div className="font-['Space_Mono'] text-xs font-bold uppercase tracking-widest text-[#E63327]">
-              Interactive
+            <div className="hidden sm:flex items-center gap-7 text-sm font-medium text-[var(--muted)]">
+              <button onClick={() => scrollTo("how")} className="hover:text-[var(--ink)] transition">How it works</button>
+              <button onClick={() => scrollTo("agents")} className="hover:text-[var(--ink)] transition">Agents</button>
+              <button onClick={() => scrollTo("pricing")} className="hover:text-[var(--ink)] transition">Pricing</button>
             </div>
-            <h2 className="mt-1 text-3xl md:text-5xl font-extrabold tracking-tight">
-              Watch the funnel leak. Then seal it.
+            <button onClick={openDemo} className="btn-primary !py-2 !px-4 !text-sm">Book a demo</button>
+          </div>
+        </nav>
+
+        {/* ---------------------------------------------- HERO */}
+        <header className="px-5 pt-20 pb-16 md:pt-28 md:pb-24">
+          <div className="max-w-5xl mx-auto text-center">
+            <Reveal>
+              <span className="inline-flex items-center gap-2 glass rounded-full px-4 py-1.5 text-xs font-medium text-[var(--muted)]">
+                <span className="w-1.5 h-1.5 rounded-full" style={{ background: "linear-gradient(120deg,var(--accent),var(--accent2))" }} />
+                Introducing {BRAND} · AI operations for service businesses
+              </span>
+            </Reveal>
+
+            <Reveal delay={80}>
+              <h1 className="mt-7 text-[2.7rem] sm:text-6xl md:text-7xl font-semibold tracking-tight leading-[1.04]">
+                Find the money your
+                <br className="hidden sm:block" /> business is leaking.
+                <span className="block grad-text">Then deploy an agent that recovers it.</span>
+              </h1>
+            </Reveal>
+
+            <Reveal delay={180}>
+              <p className="mt-7 text-lg md:text-xl text-[var(--muted)] max-w-2xl mx-auto leading-relaxed">
+                {BRAND} diagnoses where revenue and time slip out of your operations, then deploys a
+                tuned AI agent to close the gaps — and shows you exactly what it's doing, live.
+              </p>
+            </Reveal>
+
+            <Reveal delay={280}>
+              <div className="mt-9 flex flex-col sm:flex-row gap-3 justify-center">
+                <button onClick={openDemo} className="btn-primary justify-center">Book a demo</button>
+                <button onClick={() => scrollTo("how")} className="btn-ghost justify-center">See how it works</button>
+              </div>
+              <p className="mt-5 text-xs font-medium text-[var(--muted)]">
+                Built for service businesses with 1–10 people · Live in days, not quarters
+              </p>
+            </Reveal>
+
+            <Reveal delay={380} className="mt-16 md:mt-20 max-w-3xl mx-auto text-left">
+              <DashboardPreview />
+            </Reveal>
+          </div>
+        </header>
+
+        {/* ---------------------------------------------- HOW / JOURNEY (meridian spine) */}
+        <section id="how" className="px-5 py-20 md:py-28 scroll-mt-24">
+          <Reveal className="max-w-2xl mx-auto text-center mb-16 md:mb-24">
+            <span className="font-mono text-xs tracking-[0.2em] uppercase grad-text font-semibold">The path</span>
+            <h2 className="mt-3 text-3xl md:text-5xl font-semibold tracking-tight">
+              From raw data to a working agent.
             </h2>
-            <p className="mt-4 text-base text-[#3b362d]">
-              Every stage loses revenue somewhere. Tap a stage to see the leak — and plug it.
+            <p className="mt-4 text-[var(--muted)] text-lg">
+              One continuous line, four steps. Follow it down.
             </p>
           </Reveal>
-          <div className="mt-12">
-            <Funnel />
-          </div>
-        </div>
-      </section>
+          <Journey onBook={openDemo} />
+        </section>
 
-      {/* ------------------------------------------------- AUDIT */}
-      <section id="audit" className="border-b-[3px] border-[#15120D] py-20 px-5 scroll-mt-20">
-        <div className="max-w-6xl mx-auto">
-          <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4">
-            <Reveal>
-              <div className="font-['Space_Mono'] text-xs font-bold uppercase tracking-widest text-[#E63327]">
-                Live model
-              </div>
-              <h2 className="mt-1 text-3xl md:text-5xl font-extrabold tracking-tight">
-                Run the numbers on a sample team.
+        {/* ---------------------------------------------- WHAT IT FINDS */}
+        <section className="px-5 py-20 md:py-28">
+          <div className="max-w-5xl mx-auto">
+            <Reveal className="max-w-2xl mb-14">
+              <span className="font-mono text-xs tracking-[0.2em] uppercase grad-text font-semibold">What it finds</span>
+              <h2 className="mt-3 text-3xl md:text-5xl font-semibold tracking-tight">
+                The leaks hiding in your day-to-day.
               </h2>
+              <p className="mt-4 text-[var(--muted)] text-lg">
+                Same patterns across landscapers, contractors, and small B2B teams — invisible until someone counts them.
+              </p>
             </Reveal>
-            {loaded && (
-              <button
-                onClick={() => setLoaded(false)}
-                className="text-sm font-bold underline underline-offset-4 hover:text-[#E63327] self-start"
-              >
-                Reset
-              </button>
-            )}
-          </div>
 
-          {!loaded ? (
-            <Reveal>
-              <div className="mt-10 bg-white border-[3px] border-[#15120D] p-10 md:p-16 text-center">
-                <div aria-hidden className="mx-auto mb-6 flex items-center justify-center gap-2">
-                  <span className="w-6 h-6 rounded-full bg-[#E63327] spinslow" />
-                  <span className="w-0 h-0 border-l-[12px] border-r-[12px] border-b-[20px] border-l-transparent border-r-transparent border-b-[#F4C20D]" />
-                  <span className="w-6 h-6 bg-[#2A4BAE]" />
-                </div>
-                <p className="text-base font-semibold max-w-md mx-auto">
-                  Load a one-month sample of six reps and see what the engine flags.
-                </p>
-                <button
-                  onClick={runAudit}
-                  disabled={scanning}
-                  className="mt-7 bg-[#15120D] text-[#F3EEE2] text-sm font-bold px-7 py-4 border-2 border-[#15120D] hover:bg-[#E63327] hover:border-[#E63327] transition disabled:opacity-70"
-                >
-                  {scanning ? "Scanning…" : "Run the audit"}
-                </button>
-              </div>
-            </Reveal>
-          ) : (
-            <div className="mt-10 grid lg:grid-cols-5 gap-5 items-start">
-              <div className="lg:col-span-2 bg-white border-[3px] border-[#15120D]">
-                <div className="px-5 py-3 border-b-[3px] border-[#15120D] font-['Space_Mono'] text-xs font-bold uppercase tracking-widest">
-                  Sample upload · 6 reps
-                </div>
-                <div className="divide-y-2 divide-[#15120D]/10">
-                  {SAMPLE_REPS.map((r, i) => {
-                    const rate = Math.round((r.closed / r.leads) * 100);
-                    const weak = rate < 14;
-                    const slow = r.respMin > 60;
-                    return (
-                      <div
-                        key={r.rep}
-                        className="rise px-5 py-3 flex items-center justify-between text-sm gap-3"
-                        style={{ animationDelay: `${i * 70}ms` }}
-                      >
-                        <div className="min-w-0">
-                          <div className="font-bold truncate">{r.rep}</div>
-                          <div className="font-['Space_Mono'] text-xs text-[#6b6557]">
-                            {r.leads} leads ·{" "}
-                            <span className={slow ? "text-[#E63327] font-bold" : ""}>
-                              {fmtResp(r.respMin)} response
-                            </span>
-                          </div>
-                        </div>
-                        <span
-                          className={`font-['Space_Mono'] text-sm font-bold px-2 py-0.5 whitespace-nowrap ${
-                            weak ? "bg-[#E63327] text-white" : "text-[#15120D]"
-                          }`}
-                        >
-                          {rate}%
-                        </span>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-
-              <div className="lg:col-span-3 space-y-5">
-                <div className="bg-[#15120D] text-[#F3EEE2] border-[3px] border-[#15120D] p-7">
-                  <div className="font-['Space_Mono'] text-xs font-bold uppercase tracking-widest text-[#F4C20D]">
-                    Recoverable revenue
-                  </div>
-                  <div className="mt-1 flex items-end gap-3 flex-wrap">
-                    <span className="font-['Space_Mono'] text-5xl md:text-6xl font-bold tabular-nums">
-                      {fmtK(annualRecovered)}
+            <div className="grid md:grid-cols-3 gap-5">
+              {FINDINGS.map((f, i) => (
+                <Reveal key={f.title} delay={i * 100}>
+                  <article className="glass glass-lift rounded-[26px] p-7 h-full">
+                    <span className="font-mono text-[11px] tracking-[0.15em] uppercase grad-text font-semibold">
+                      {f.tag}
                     </span>
-                    <span className="text-sm font-semibold mb-2 opacity-70">/ year</span>
+                    <h3 className="mt-3 text-xl font-semibold tracking-tight leading-snug">{f.title}</h3>
+                    <p className="mt-3 text-[15px] leading-relaxed text-[var(--muted)]">{f.body}</p>
+                  </article>
+                </Reveal>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* ---------------------------------------------- AGENTS */}
+        <section id="agents" className="px-5 py-20 md:py-28 scroll-mt-24">
+          <div className="max-w-5xl mx-auto">
+            <Reveal className="max-w-2xl mb-14">
+              <span className="font-mono text-xs tracking-[0.2em] uppercase grad-text font-semibold">The agents</span>
+              <h2 className="mt-3 text-3xl md:text-5xl font-semibold tracking-tight">
+                Modular agents, tuned to your data.
+              </h2>
+              <p className="mt-4 text-[var(--muted)] text-lg">
+                Start with the one that plugs your biggest leak. Add more as you grow — all on the same dashboard.
+              </p>
+            </Reveal>
+
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
+              {AGENTS.map((a, i) => (
+                <Reveal key={a.title} delay={(i % 3) * 100}>
+                  <article className="glass glass-lift rounded-[26px] p-7 h-full flex flex-col">
+                    <span className="w-9 h-9 rounded-xl grid place-items-center" style={{ background: "linear-gradient(135deg,var(--accent),var(--accent2))" }}>
+                      <span className="w-2.5 h-2.5 rounded-full bg-white/90" />
+                    </span>
+                    <h3 className="mt-5 text-lg font-semibold tracking-tight">{a.title}</h3>
+                    <p className="mt-2 text-[15px] leading-relaxed text-[var(--muted)]">{a.body}</p>
+                  </article>
+                </Reveal>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* ---------------------------------------------- PRICING */}
+        <section id="pricing" className="px-5 py-20 md:py-28 scroll-mt-24">
+          <div className="max-w-4xl mx-auto">
+            <Reveal className="text-center max-w-2xl mx-auto mb-14">
+              <span className="font-mono text-xs tracking-[0.2em] uppercase grad-text font-semibold">Pricing</span>
+              <h2 className="mt-3 text-3xl md:text-5xl font-semibold tracking-tight">
+                Less than a hire. Working a lot harder.
+              </h2>
+              <p className="mt-4 text-[var(--muted)] text-lg">
+                A one-time build, then a flat monthly to run and tune the agent. Scoped to the work it does.
+              </p>
+            </Reveal>
+
+            <Reveal>
+              <div className="glass rounded-[32px] p-8 md:p-12">
+                <div className="grid md:grid-cols-2 gap-8 md:gap-10">
+                  <div className="md:border-r md:border-black/8 md:pr-10">
+                    <div className="font-mono text-xs tracking-[0.15em] uppercase text-[var(--muted)]">Setup &amp; build</div>
+                    <div className="mt-2 flex items-end gap-2">
+                      <span className="text-5xl font-semibold tracking-tight">$2–5K</span>
+                      <span className="text-[var(--muted)] mb-1.5 text-sm">one-time</span>
+                    </div>
+                    <p className="mt-3 text-[15px] text-[var(--muted)] leading-relaxed">
+                      Full diagnostic, the agent built and tuned to your data, and your live dashboard — set up in days.
+                    </p>
                   </div>
-                  <p className="mt-1 text-sm opacity-70 font-['Space_Mono']">
-                    {fmtK(monthlyRecovered)} / month · toggle the fixes below
-                  </p>
+                  <div>
+                    <div className="font-mono text-xs tracking-[0.15em] uppercase text-[var(--muted)]">Run &amp; tune</div>
+                    <div className="mt-2 flex items-end gap-2">
+                      <span className="text-5xl font-semibold tracking-tight grad-text">$2–5K</span>
+                      <span className="text-[var(--muted)] mb-1.5 text-sm">/ month</span>
+                    </div>
+                    <p className="mt-3 text-[15px] text-[var(--muted)] leading-relaxed">
+                      The agent runs, we monitor and tune, you keep recovering. Price scales with the agent's scope.
+                    </p>
+                  </div>
                 </div>
 
-                <div className="space-y-3">
-                  {(Object.keys(FIXES) as FixKey[]).map((key) => {
-                    const f = FIXES[key];
-                    const on = fixes[key];
-                    return (
-                      <button
-                        key={key}
-                        onClick={() => toggleFix(key)}
-                        className={`w-full text-left flex items-start gap-4 p-5 border-[3px] border-[#15120D] transition ${
-                          on ? "bg-white" : "bg-transparent hover:bg-white/40"
-                        }`}
-                      >
-                        <span
-                          aria-hidden
-                          className={`mt-0.5 w-6 h-6 flex-shrink-0 border-2 border-[#15120D] flex items-center justify-center font-bold transition-colors ${
-                            on ? "bg-[#2A4BAE] text-white" : "bg-transparent"
-                          }`}
-                        >
-                          {on ? "✓" : ""}
-                        </span>
-                        <span className="flex-1 min-w-0">
-                          <span className="block font-bold leading-snug">{f.title}</span>
-                          <span className="block mt-1 text-sm text-[#3b362d] leading-relaxed">{f.note}</span>
-                        </span>
-                        <span className="font-['Space_Mono'] text-sm font-bold text-[#E63327] whitespace-nowrap">
-                          +{fmtK(f.monthly)}/mo
-                        </span>
-                      </button>
-                    );
-                  })}
-                </div>
-                <p className="text-xs text-[#6b6557] font-['Space_Mono']">
-                  Illustrative model derived from the sample data. Your real numbers come from your own upload.
+                <ul className="mt-9 grid sm:grid-cols-2 gap-x-8 gap-y-3 border-t border-black/8 pt-8">
+                  {INCLUDED.map((x) => (
+                    <li key={x} className="flex gap-3 text-[15px]">
+                      <span className="mt-1.5 w-1.5 h-1.5 rounded-full shrink-0" style={{ background: "linear-gradient(120deg,var(--accent),var(--accent2))" }} />
+                      <span className="text-[var(--ink)]/85">{x}</span>
+                    </li>
+                  ))}
+                </ul>
+
+                <button onClick={openDemo} className="btn-primary justify-center w-full mt-9">
+                  Book a demo
+                </button>
+                <p className="mt-4 text-center text-xs text-[var(--muted)]">
+                  20-minute call. We run the diagnostic on your numbers and show you the leaks before you commit.
                 </p>
               </div>
-            </div>
-          )}
-        </div>
-      </section>
+            </Reveal>
+          </div>
+        </section>
 
-      {/* ------------------------------------------------- AUTOMATION */}
-      <section className="border-b-[3px] border-[#15120D] py-20 px-5">
-        <div className="max-w-6xl mx-auto">
-          <Reveal>
-            <h2 className="text-3xl md:text-5xl font-extrabold tracking-tight max-w-2xl leading-tight">
-              It doesn't stop at the insight.
-            </h2>
-            <p className="mt-4 text-base text-[#3b362d] max-w-xl">
-              For your biggest leaks, SalesWise builds the small systems that plug them — no extra tools to buy, no setup project.
-            </p>
+        {/* ---------------------------------------------- FINAL CTA */}
+        <section className="px-5 pb-24">
+          <Reveal className="max-w-4xl mx-auto">
+            <div className="glass rounded-[36px] px-8 py-16 md:py-20 text-center">
+              <Mark size={34} />
+              <h2 className="mt-6 text-3xl md:text-5xl font-semibold tracking-tight max-w-2xl mx-auto leading-[1.08]">
+                See exactly where you're losing money.
+              </h2>
+              <p className="mt-4 text-[var(--muted)] text-lg max-w-xl mx-auto">
+                Bring your data. We'll find the leaks live and show you the agent that plugs them.
+              </p>
+              <button onClick={openDemo} className="btn-primary justify-center mt-8">
+                Book a demo
+              </button>
+            </div>
           </Reveal>
+        </section>
 
-          <div className="mt-12 grid md:grid-cols-3 gap-5">
-            {[
-              { c: "bg-[#E63327]", round: "rounded-full", t: "Speed-to-lead alerts", d: "A new lead lands and the right rep gets pinged instantly. Ignored too long? It auto-reassigns." },
-              { c: "bg-[#F4C20D]", round: "", t: "Follow-up sequences", d: "Warm leads get a scheduled multi-touch cadence, so “call me later” never turns into never." },
-              { c: "bg-[#2A4BAE]", round: "", t: "Rep scorecards", d: "Weekly performance numbers generated automatically — coach off data, not gut feel." },
-            ].map((x, i) => (
-              <Reveal key={x.t} pop delay={i * 120}>
-                <article className="border-[3px] border-[#15120D] p-7 bg-[#F3EEE2] h-full hover:-translate-y-1 transition-transform">
-                  <div aria-hidden className={`w-9 h-9 mb-5 ${x.c} ${x.round}`} />
-                  <h3 className="font-bold leading-snug">{x.t}</h3>
-                  <p className="mt-2 text-sm text-[#3b362d] leading-relaxed">{x.d}</p>
-                </article>
-              </Reveal>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      <Marquee />
-
-      {/* ------------------------------------------------- FOUNDER */}
-      <section className="border-b-[3px] border-[#15120D] py-20 px-5">
-        <Reveal className="max-w-3xl mx-auto">
-          <span aria-hidden className="block w-10 h-10 rounded-full bg-[#E63327] mb-7" />
-          <blockquote className="text-2xl md:text-3xl font-semibold leading-snug tracking-tight">
-            I built SalesWise because I was sick of software that demanded hours of data entry
-            from reps and gave back zero guidance. You don't need another CRM to babysit —
-            you need to find the revenue you already earned and dropped, and plug the hole.
-          </blockquote>
-          <div className="mt-7 flex items-center justify-between border-t-[3px] border-[#15120D] pt-5">
-            <div>
-              <div className="font-bold">Andrew Whitesides</div>
-              <div className="text-xs font-semibold uppercase tracking-widest text-[#6b6557]">
-                Founder, SalesWise
-              </div>
+        {/* ---------------------------------------------- FOOTER */}
+        <footer className="px-5 py-10 border-t border-black/5">
+          <div className="max-w-5xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div className="flex items-center gap-2.5">
+              <Mark size={18} />
+              <span className="font-semibold">{BRAND}</span>
             </div>
-            <a
-              href="mailto:andrew@trysaleswise.com"
-              className="text-sm font-bold text-[#2A4BAE] hover:underline underline-offset-4"
-            >
-              andrew@trysaleswise.com
-            </a>
-          </div>
-        </Reveal>
-      </section>
-
-      {/* ------------------------------------------------- PRICING */}
-      <section className="border-b-[3px] border-[#15120D] py-20 px-5">
-        <Reveal className="max-w-2xl mx-auto text-center">
-          <h2 className="text-3xl md:text-5xl font-extrabold tracking-tight">One flat price.</h2>
-          <p className="mt-3 text-base text-[#3b362d] max-w-md mx-auto">
-            Whole team. Every seat. No per-rep math, no usage caps.
-          </p>
-
-          <div className="mt-12 bg-[#15120D] text-[#F3EEE2] border-[3px] border-[#15120D] p-8 md:p-10 text-left relative hover:-translate-y-1 transition-transform">
-            <span className="absolute top-7 right-7 bg-[#F4C20D] text-[#15120D] text-[10px] font-bold uppercase tracking-widest px-2 py-1">
-              Full recovery license
-            </span>
-            <span aria-hidden className="flex items-center gap-1.5 mb-6">
-              <span className="w-5 h-5 rounded-full bg-[#E63327] spinslow" />
-              <span className="w-0 h-0 border-l-[10px] border-r-[10px] border-b-[17px] border-l-transparent border-r-transparent border-b-[#F4C20D]" />
-              <span className="w-5 h-5 bg-[#2A4BAE]" />
-            </span>
-
-            <div className="flex items-end gap-1.5">
-              <span className="font-['Space_Mono'] text-6xl font-bold">$500</span>
-              <span className="text-sm font-semibold mb-2 opacity-70">/month</span>
+            <div className="flex items-center gap-6 text-sm text-[var(--muted)]">
+              <a href={`mailto:${CONTACT_EMAIL}`} className="hover:text-[var(--ink)] transition">{CONTACT_EMAIL}</a>
+              <span className="font-mono text-xs">© 2026 {BRAND}</span>
             </div>
-
-            <ul className="mt-7 space-y-3 text-sm border-t border-white/15 pt-6">
-              {[
-                "Unlimited uploads + full-funnel leak analysis",
-                "Reps, leads, response time, follow-up — every gap",
-                "Prioritized fixes with step-by-step plays",
-                "Automated systems built to plug your top leaks",
-                "Unlimited seats & managers — flat, no per-seat fees",
-                "CRM imports (HubSpot, Salesforce, Pipedrive)",
-              ].map((x) => (
-                <li key={x} className="flex gap-3">
-                  <span aria-hidden className="mt-1.5 w-2 h-2 bg-[#F4C20D] flex-shrink-0" />
-                  {x}
-                </li>
-              ))}
-            </ul>
-
-            <Link
-              href="/signup"
-              className="mt-8 block text-center bg-[#E63327] text-white text-sm font-bold py-4 border-2 border-[#E63327] hover:bg-[#F4C20D] hover:text-[#15120D] hover:border-[#F4C20D] transition"
-            >
-              Start your free audit
-            </Link>
           </div>
-
-          <p className="mt-6 text-xs text-[#6b6557] max-w-sm mx-auto leading-relaxed">
-            30-day money-back guarantee. If SalesWise doesn't surface a leak worth multiples of the
-            subscription, email Andrew for a refund.
-          </p>
-        </Reveal>
-      </section>
-
-      {/* ------------------------------------------------- FOOTER */}
-      <footer className="py-12 px-5">
-        <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-          <div className="flex items-center gap-2.5">
-            <span aria-hidden className="flex items-center gap-1">
-              <span className="w-3 h-3 rounded-full bg-[#E63327]" />
-              <span className="w-0 h-0 border-l-[6px] border-r-[6px] border-b-[10px] border-l-transparent border-r-transparent border-b-[#F4C20D]" />
-              <span className="w-3 h-3 bg-[#2A4BAE]" />
-            </span>
-            <span className="font-bold">SalesWise</span>
-          </div>
-          <p className="text-xs font-['Space_Mono'] text-[#6b6557]">
-            © 2026 SalesWise · Find the leak. Fix the leak.
-          </p>
-        </div>
-      </footer>
+        </footer>
+      </div>
     </div>
   );
 }
