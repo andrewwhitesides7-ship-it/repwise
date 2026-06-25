@@ -69,8 +69,7 @@ export function TimeOfDayChart({ records }: { records: SalesRecord[] }) {
     <div className="bg-gray-900 border border-gray-800 rounded-2xl p-6">
       <h3 className="text-white font-semibold mb-1">Close Rate by Time of Day</h3>
       <p className="text-gray-500 text-xs mb-5">When your team closes best</p>
-      <ResponsiveContainer width="100%" height={200}>
-        <BarChart data={data} margin={{ top: 5, right: 5, left: -20, bottom: 5 }}>
+      <ResponsiveContainer width="100%" height={180}>       <BarChart data={data} margin={{ top: 5, right: 5, left: -20, bottom: 5 }}>
           <CartesianGrid strokeDasharray="3 3" stroke="#1f2937" vertical={false} />
           <XAxis dataKey="name" tick={{ fill: "#6b7280", fontSize: 11 }} axisLine={false} tickLine={false} />
           <YAxis tick={{ fill: "#6b7280", fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={(v) => `${v}%`} />
@@ -109,8 +108,7 @@ export function RepPerformanceChart({ records }: { records: SalesRecord[] }) {
     <div className="bg-gray-900 border border-gray-800 rounded-2xl p-6">
       <h3 className="text-white font-semibold mb-1">Rep Performance</h3>
       <p className="text-gray-500 text-xs mb-5">Closes per rep this period</p>
-      <ResponsiveContainer width="100%" height={200}>
-        <BarChart data={data} layout="vertical" margin={{ top: 5, right: 30, left: 10, bottom: 5 }}>
+      <ResponsiveContainer width="100%" height={180}>       <BarChart data={data} layout="vertical" margin={{ top: 5, right: 30, left: 10, bottom: 5 }}>
           <CartesianGrid strokeDasharray="3 3" stroke="#1f2937" horizontal={false} />
           <XAxis type="number" tick={{ fill: "#6b7280", fontSize: 11 }} axisLine={false} tickLine={false} />
           <YAxis type="category" dataKey="name" tick={{ fill: "#9ca3af", fontSize: 12 }} axisLine={false} tickLine={false} width={50} />
@@ -145,8 +143,7 @@ export function RevenueOverTimeChart({ records }: { records: SalesRecord[] }) {
     <div className="bg-gray-900 border border-gray-800 rounded-2xl p-6">
       <h3 className="text-white font-semibold mb-1">Revenue Over Time</h3>
       <p className="text-gray-500 text-xs mb-5">Daily revenue from closed deals</p>
-      <ResponsiveContainer width="100%" height={200}>
-        <AreaChart data={data} margin={{ top: 5, right: 10, left: -10, bottom: 5 }}>
+      <ResponsiveContainer width="100%" height={180}>       <AreaChart data={data} margin={{ top: 5, right: 10, left: -10, bottom: 5 }}>
           <defs>
             <linearGradient id="revGrad" x1="0" y1="0" x2="0" y2="1">
               <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.25} />

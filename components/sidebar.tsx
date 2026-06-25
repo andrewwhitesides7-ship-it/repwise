@@ -5,6 +5,11 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 
+/* ------------------------------------------------------------------ *
+ * Meridian — Sidebar Layout Component
+ * Apple liquid-glass theme matching dashboard-client.tsx
+ * ------------------------------------------------------------------ */
+
 const navLinks = [
   {
     href: "/dashboard",
@@ -97,11 +102,14 @@ export default function Sidebar({ email }: { email?: string }) {
   const router = useRouter();
   const [signingOut, setSigningOut] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [hoveredLink, setHoveredLink] = useState<string | null>(null);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const isAdmin = adminEmails.includes(email || "");
   const allLinks = isAdmin ? [...navLinks, adminLink] : navLinks;
-
   const initial = email?.[0]?.toUpperCase() || "?";
 
   async function handleSignOut() {
@@ -112,151 +120,149 @@ export default function Sidebar({ email }: { email?: string }) {
   }
 
   const SidebarContent = () => (
-    <div className="flex flex-col h-full bg-[#0a0a12] border-r border-white/5">
+    <div className="flex flex-col h-full glass border-r border-black/5 md-root text-[var(--ink)] antialiased">
+      
+      {/* Global CSS Injector to guarantee dashboard variables align */}
+      <style jsx global>{`
+        :root {
+          --ink: #1d1d1f; --muted: #6e6e73; --field: #f5f5f7;
+          --accent: #0a84ff; --accent2: #6a5cff;
+        }
+        .md-root {
+          font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Inter", system-ui, sans-serif;
+          letter-spacing: -0.01em;
+        }
+        .grad-text { background: linear-gradient(120deg, var(--accent), var(--accent2)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+        .glass {
+          position: relative;
+          background: linear-gradient(135deg, rgba(255,255,255,0.65), rgba(255,255,255,0.40));
+          backdrop-filter: blur(22px) saturate(180%); -webkit-backdrop-filter: blur(22px) saturate(180%);
+          border-right: 1px solid rgba(0,0,0,0.06);
+          box-shadow: inset 0 1px 0 rgba(255,255,255,0.5);
+        }
+        .glass-item-active {
+          background: rgba(255, 255, 255, 0.7);
+          box-shadow: 0 4px 14px rgba(20,24,40,0.04), inset 0 1px 0 rgba(255,255,255,0.9);
+          border: 1px solid rgba(0,0,0,0.04);
+        }
+        .glass-btn-hover:hover {
+          background: rgba(0, 0, 0, 0.03);
+        }
+      `}</style>
 
-      {/* Logo */}
-      <div className="px-5 py-5 border-b border-white/5">
+      {/* Logo Section */}
+      <div className="px-6 py-5 border-b border-black/5">
         <Link href="/dashboard" className="flex items-center gap-2.5 group">
-          <div className="w-8 h-8 rounded-xl bg-blue-600 flex items-center justify-center shadow-lg shadow-blue-600/30 group-hover:shadow-blue-500/40 transition-all duration-300">
+          <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-[var(--accent)] to-[var(--accent2)] flex items-center justify-center shadow-md shadow-blue-500/20 group-hover:scale-[1.02] transition-transform duration-300">
             <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+              <path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
             </svg>
           </div>
-          <span className="text-base font-black text-white tracking-tight">
-            Try<span className="text-blue-400">RepWise</span>
-          </span>
+          <span className="font-semibold tracking-tight text-lg grad-text">Meridian</span>
         </Link>
       </div>
 
-      {/* Nav */}
-      <nav className="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto scrollbar-none">
+      {/* Navigation Links */}
+      <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
         {allLinks.map((link) => {
-          const isActive = pathname === link.href || (link.href !== "/dashboard" && pathname.startsWith(link.href + "/"));
-          const isHovered = hoveredLink === link.href;
-
+          const isActive = pathname === link.href;
           return (
             <Link
               key={link.href}
               href={link.href}
               onClick={() => setMobileOpen(false)}
-              onMouseEnter={() => setHoveredLink(link.href)}
-              onMouseLeave={() => setHoveredLink(null)}
-              className={`relative flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200 group ${
+              className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 group relative ${
                 isActive
-                  ? "text-white"
-                  : "text-gray-500 hover:text-gray-200"
+                  ? "glass-item-active text-[var(--ink)]"
+                  : "text-[var(--muted)] glass-btn-hover hover:text-[var(--ink)]"
               }`}
             >
-              {/* Active background */}
-              {isActive && (
-                <div className="absolute inset-0 rounded-xl bg-blue-600/15 border border-blue-500/20" />
-              )}
-
-              {/* Hover background */}
-              {!isActive && isHovered && (
-                <div className="absolute inset-0 rounded-xl bg-white/4" />
-              )}
-
-              {/* Active left bar */}
-              {isActive && (
-                <div className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 bg-blue-400 rounded-full" />
-              )}
-
-              <span className={`relative z-10 transition-all duration-200 ${isActive ? "text-blue-400" : "text-gray-600 group-hover:text-gray-300"}`}>
+              <div className={`transition-colors duration-200 ${isActive ? "text-[var(--accent)]" : "text-[var(--muted)] group-hover:text-[var(--ink)]"}`}>
                 {link.icon}
-              </span>
-              <span className="relative z-10">{link.label}</span>
-
-              {/* Active glow dot */}
+              </div>
+              <span>{link.label}</span>
+              
+              {/* Discrete Apple-styled indicator dot */}
               {isActive && (
-                <div className="relative z-10 ml-auto w-1.5 h-1.5 rounded-full bg-blue-400 shadow-lg shadow-blue-400/60" />
-              )}
-
-              {link.label === "Refer & Earn" && (
-                <span className="relative z-10 ml-auto text-[10px] font-black text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-1.5 py-0.5 rounded-full">
-                  $20
-                </span>
+                <span className="absolute right-3 w-1 h-1 rounded-full bg-[var(--accent)]" />
               )}
             </Link>
           );
         })}
       </nav>
 
-      {/* Bottom section */}
-      <div className="px-3 pb-4 pt-3 border-t border-white/5 space-y-0.5">
-        <Link
-          href="/help"
-          className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold text-gray-500 hover:text-gray-200 hover:bg-white/4 transition-all duration-200"
-        >
-          <svg className="w-[18px] h-[18px] text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-          </svg>
-          Help
-        </Link>
-
-        {/* User card */}
-        <div className="flex items-center gap-3 px-3 py-2.5 rounded-xl bg-white/3 border border-white/5 mt-2">
-          <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white text-xs font-black flex-shrink-0 shadow-lg shadow-blue-500/20">
+      {/* User Footer Profile & Sign Out */}
+      <div className="p-4 border-t border-black/5 bg-white/10">
+        <div className="flex items-center gap-3 px-2 py-1.5 mb-2.5">
+          <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-slate-200 to-slate-100 border border-black/5 flex items-center justify-center font-semibold text-xs text-[var(--ink)] shadow-inner">
             {initial}
           </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-white text-xs font-bold truncate">{email?.split("@")[0] || "User"}</p>
-            <p className="text-gray-600 text-xs truncate">{email}</p>
+          <div className="min-w-0 flex-1">
+            <p className="text-xs font-medium text-[var(--ink)] truncate">{email || "User Account"}</p>
+            <p className="text-[10px] text-[var(--muted)] uppercase tracking-wider font-mono">Workspace</p>
           </div>
-          <button
-            onClick={handleSignOut}
-            disabled={signingOut}
-            className="flex-shrink-0 text-gray-600 hover:text-gray-300 transition-colors duration-200 p-1 rounded-lg hover:bg-white/8"
-            title="Sign out"
-          >
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-            </svg>
-          </button>
         </div>
+
+        <button
+          onClick={handleSignOut}
+          disabled={signingOut}
+          className="w-full flex items-center justify-center gap-2 px-3 py-2 text-xs font-semibold text-red-500 hover:bg-red-50/60 active:bg-red-100/50 rounded-xl border border-transparent hover:border-red-200/40 transition-all duration-200 disabled:opacity-50"
+        >
+          {signingOut ? (
+            <span>Signing out...</span>
+          ) : (
+            <>
+              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+              </svg>
+              <span>Sign Out</span>
+            </>
+          )}
+        </button>
       </div>
     </div>
   );
 
   return (
     <>
-      {/* Desktop */}
-      <aside className="hidden md:flex w-56 flex-col h-screen flex-shrink-0">
+      {/* Desktop Sidebar Persistent Wrapper */}
+      <aside className={`hidden md:block fixed inset-y-0 left-0 w-64 z-30 transition-opacity duration-300 ${mounted ? "opacity-100" : "opacity-0"}`}>
         <SidebarContent />
       </aside>
 
-      {/* Mobile top bar */}
-      <div className="md:hidden fixed top-0 left-0 right-0 z-40 bg-[#0a0a12]/95 backdrop-blur-xl border-b border-white/5 px-4 py-3 flex items-center justify-between">
+      {/* Mobile Top Navigation Header */}
+      <div className="md:hidden sticky top-0 left-0 right-0 h-14 glass border-b border-black/5 px-4 flex items-center justify-between z-40">
         <Link href="/dashboard" className="flex items-center gap-2">
-          <div className="w-7 h-7 rounded-lg bg-blue-600 flex items-center justify-center shadow-lg shadow-blue-600/30">
-            <svg className="w-3.5 h-3.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+          <div className="w-6 h-6 rounded-lg bg-gradient-to-br from-[var(--accent)] to-[var(--accent2)] flex items-center justify-center">
+            <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
             </svg>
           </div>
-          <span className="text-base font-black text-white">Try<span className="text-blue-400">RepWise</span></span>
+          <span className="font-semibold text-sm tracking-tight grad-text">Meridian</span>
         </Link>
+
         <button
           onClick={() => setMobileOpen(!mobileOpen)}
-          className="w-8 h-8 flex items-center justify-center rounded-xl bg-white/5 border border-white/8 text-gray-400 hover:text-white transition-colors duration-200"
+          aria-label="Toggle navigation menu"
+          className="w-9 h-9 rounded-xl flex items-center justify-center hover:bg-black/5 active:bg-black/10 text-[var(--ink)] transition"
         >
           {mobileOpen ? (
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
           ) : (
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" /></svg>
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" /></svg>
           )}
         </button>
       </div>
 
-      {/* Mobile drawer */}
+      {/* Mobile Sidebar Drawer Overlay */}
       {mobileOpen && (
-        <div className="md:hidden fixed inset-0 z-30">
-          <div
-            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
-            onClick={() => setMobileOpen(false)}
-          />
-          <aside className="absolute left-0 top-0 bottom-0 w-64">
+        <div className="md:hidden fixed inset-0 z-30 flex">
+          {/* Backdrop blur closer */}
+          <div className="fixed inset-0 bg-black/10 backdrop-blur-sm" onClick={() => setMobileOpen(false)} />
+          
+          <div className="relative w-64 max-w-xs h-full animate-in slide-in-from-left duration-200">
             <SidebarContent />
-          </aside>
+          </div>
         </div>
       )}
     </>
