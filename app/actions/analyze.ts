@@ -7,6 +7,10 @@ import { redirect } from "next/navigation";
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY! });
 
+/* ------------------------------------------------------------------ *
+ * Helpers (unchanged signatures so the sales_records mapping still works)
+ * ------------------------------------------------------------------ */
+
 function normalizeKey(key: string): string {
   return key.toLowerCase().trim().replace(/[\s\-\/\\().]+/g, "_").replace(/_+/g, "_").replace(/^_|_$/g, "");
 }
@@ -14,7 +18,7 @@ function normalizeKey(key: string): string {
 function findColumn(row: Record<string, string>, candidates: string[]): string {
   const keys = Object.keys(row);
   for (const candidate of candidates) {
-    const match = keys.find(k => normalizeKey(k) === candidate || normalizeKey(k).includes(candidate));
+    const match = keys.find((k) => normalizeKey(k) === candidate || normalizeKey(k).includes(candidate));
     if (match) return row[match] || "";
   }
   return "";
@@ -39,190 +43,213 @@ function parseDate(val: string): Date | null {
   return null;
 }
 
+/* ------------------------------------------------------------------ *
+ * Schema-agnostic profiler. Works on ANY service-business export —
+ * no assumed column names. Types every column, then auto-detects a
+ * status column + money column and rolls the rows into a funnel with
+ * dollars attached, so leak surfaces are quantified up front.
+ * ------------------------------------------------------------------ */
+
+type ColType = "date" | "money" | "number" | "category" | "text" | "empty";
+
+interface ColInfo {
+  col: string;
+  type: ColType;
+  fill: number;
+  distinct: number;
+  nonEmpty: string[];
+  sum?: number;
+  avg?: number;
+  min?: number;
+  max?: number;
+  minDate?: Date;
+  maxDate?: Date;
+  dist?: [string, number][];
+}
+
+// Funnel stages, in order. Each matches the messy status words real tools export.
+const STATUS_BUCKETS: { key: string; label: string; re: RegExp }[] = [
+  { key: "uncontacted", label: "New / uncontacted", re: /(^new$|^lead$|^open$|inbound|unassigned|^received$|no\s?response|to\s?contact|not\s?contacted)/ },
+  { key: "quoted", label: "Quoted / estimate out", re: /(quote|quoted|estimate|proposal|bid|pending|awaiting|sent|in\s?review|negotiat)/ },
+  { key: "scheduled", label: "Booked / scheduled", re: /(schedul|booked|appointment|confirmed|upcoming|dispatched)/ },
+  { key: "won", label: "Won / sold / completed", re: /(won|sold|closed\s?won|complete|completed|^done$|^paid$|active|fulfilled|installed)/ },
+  { key: "lost", label: "Lost / dead", re: /(lost|dead|declin|reject|closed\s?lost|unqualified|no\s?sale|^no$|gone\s?cold)/ },
+  { key: "cancelled", label: "Cancelled / no-show", re: /(cancel|no\s?show|noshow|missed|rescheduled\s?out|abandon)/ },
+  { key: "unpaid", label: "Unpaid / overdue", re: /(unpaid|overdue|outstanding|past\s?due|owing|owed|delinquent|^due$)/ },
+];
+
+function bucketOf(v: string): string | null {
+  const s = v.toLowerCase().trim();
+  for (const b of STATUS_BUCKETS) if (b.re.test(s)) return b.key;
+  return null;
+}
+
+function profileColumns(rows: Record<string, string>[]): ColInfo[] {
+  const total = rows.length;
+  const cols = Object.keys(rows[0] || {});
+  return cols.map((col) => {
+    const values = rows.map((r) => (r[col] ?? "").toString().trim());
+    const nonEmpty = values.filter((v) => v !== "");
+    const fill = total ? nonEmpty.length / total : 0;
+    const distinct = new Set(nonEmpty.map((v) => v.toLowerCase())).size;
+    const sample = nonEmpty.slice(0, 30);
+    const nk = normalizeKey(col);
+
+    const dateParsed = sample.map(parseDate).filter(Boolean) as Date[];
+    const dateRatio = sample.length ? dateParsed.length / sample.length : 0;
+    const dateHeader = /(date|day|created|closed|sold|received|sent|due|schedul|complet|when|timestamp|month|year|opened)/.test(nk);
+    const isDate = nonEmpty.length > 0 && (dateRatio >= 0.8 || (dateRatio >= 0.5 && dateHeader));
+
+    const numLike = nonEmpty.filter((v) => /\d/.test(v) && /^[\s$€£,.\d%()+-]+$/.test(v));
+    const numRatio = nonEmpty.length ? numLike.length / nonEmpty.length : 0;
+    const isNumeric = !isDate && numRatio >= 0.7;
+    const moneyHeader = /(amount|value|revenue|price|total|cost|paid|invoice|quote|deal|estimate|balance|fee|charge|sale|payment|ticket|bill|charged|subtotal)/.test(nk);
+    const hasCurrency = sample.some((v) => /[$€£]/.test(v));
+    const isMoney = isNumeric && (moneyHeader || hasCurrency);
+
+    let type: ColType = "text";
+    if (fill === 0) type = "empty";
+    else if (isDate) type = "date";
+    else if (isMoney) type = "money";
+    else if (isNumeric) type = "number";
+    else if (distinct > 0 && distinct <= 20 && distinct < nonEmpty.length * 0.7) type = "category";
+
+    const info: ColInfo = { col, type, fill, distinct, nonEmpty };
+
+    if (type === "money" || type === "number") {
+      const nums = nonEmpty.map(parseNum).filter((n) => !isNaN(n));
+      const nonZero = nums.filter((n) => n !== 0);
+      info.sum = nums.reduce((a, b) => a + b, 0);
+      info.avg = nonZero.length ? info.sum / nonZero.length : 0;
+      info.min = nums.length ? Math.min(...nums) : 0;
+      info.max = nums.length ? Math.max(...nums) : 0;
+    }
+    if (type === "date") {
+      const ds = nonEmpty.map(parseDate).filter(Boolean) as Date[];
+      if (ds.length) {
+        info.minDate = new Date(Math.min(...ds.map((d) => d.getTime())));
+        info.maxDate = new Date(Math.max(...ds.map((d) => d.getTime())));
+      }
+    }
+    if (type === "category") {
+      const counts: Record<string, number> = {};
+      nonEmpty.forEach((v) => { counts[v] = (counts[v] || 0) + 1; });
+      info.dist = Object.entries(counts).sort((a, b) => b[1] - a[1]).slice(0, 12);
+    }
+    return info;
+  });
+}
+
 function buildSummary(rows: Record<string, string>[]): string {
   if (!rows.length) return "No data found.";
+  const total = rows.length;
+  const cols = Object.keys(rows[0]);
+  const infos = profileColumns(rows);
 
-  const columns = Object.keys(rows[0]);
-  const totalRows = rows.length;
-  const get = (row: Record<string, string>, candidates: string[]) => findColumn(row, candidates);
+  // Pick the primary money column (largest total).
+  const moneyCol = infos.filter((i) => i.type === "money").sort((a, b) => (b.sum || 0) - (a.sum || 0))[0];
 
-  const repMetrics: Record<string, { contacts: number; closes: number; revenue: number }> = {};
-  const customerTypeMetrics: Record<string, { contacts: number; closes: number; revenue: number }> = {};
-  const responseTimeMetrics: Record<string, { contacts: number; closes: number }> = {};
-  const contactMethodMetrics: Record<string, { contacts: number; closes: number }> = {};
-  const timeMap: Record<string, { knocked: number; closed: number }> = {};
-  const dayMap: Record<string, { knocked: number; closed: number }> = {};
-  const zipMap: Record<string, { knocked: number; closed: number }> = {};
+  // Pick the status column: the category column whose values best match funnel stages.
+  let statusCol: ColInfo | undefined;
+  let bestMatched = 0;
+  for (const c of infos.filter((i) => i.type === "category")) {
+    const matched = c.nonEmpty.filter((v) => bucketOf(v)).length;
+    const ratio = c.nonEmpty.length ? matched / c.nonEmpty.length : 0;
+    if (ratio > 0.4 && matched > bestMatched) { bestMatched = matched; statusCol = c; }
+  }
 
-  let totalRevenue = 0;
-  let totalCloses = 0;
-  let unfollowedLeads = 0;
+  // Roll rows into a funnel with dollars attached.
+  let funnelText = "";
+  let leakText = "";
+  if (statusCol) {
+    const buckets: Record<string, { count: number; sum: number }> = {};
+    rows.forEach((r) => {
+      const sv = (r[statusCol!.col] ?? "").toString().trim();
+      if (!sv) return;
+      const k = bucketOf(sv) || "other";
+      if (!buckets[k]) buckets[k] = { count: 0, sum: 0 };
+      buckets[k].count++;
+      if (moneyCol) buckets[k].sum += parseNum((r[moneyCol.col] ?? "").toString());
+    });
+    funnelText = STATUS_BUCKETS.map((b) => {
+      const x = buckets[b.key];
+      if (!x || !x.count) return null;
+      const money = moneyCol && x.sum > 0 ? `, ~$${Math.round(x.sum).toLocaleString()} attached` : "";
+      const pct = ((x.count / total) * 100).toFixed(0);
+      return `  - ${b.label}: ${x.count} (${pct}%)${money}`;
+    }).filter(Boolean).join("\n");
 
-  const dayNames = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+    // Explicit leak callouts the model can turn into dollar-denominated insights.
+    const leaks: string[] = [];
+    const q = buckets["quoted"]; const u = buckets["uncontacted"]; const c = buckets["cancelled"]; const p = buckets["unpaid"];
+    if (q && q.sum > 0) leaks.push(`  - Quoted but not won: ${q.count} deals worth ~$${Math.round(q.sum).toLocaleString()} sitting open.`);
+    if (u && u.count) leaks.push(`  - New / uncontacted: ${u.count} leads with no recorded contact${moneyCol && u.sum > 0 ? ` (~$${Math.round(u.sum).toLocaleString()} potential)` : ""}.`);
+    if (c && c.count) leaks.push(`  - Cancelled / no-show: ${c.count} appointments${moneyCol && c.sum > 0 ? ` (~$${Math.round(c.sum).toLocaleString()})` : ""}.`);
+    if (p && p.sum > 0) leaks.push(`  - Unpaid / overdue: ${p.count} invoices worth ~$${Math.round(p.sum).toLocaleString()}.`);
+    leakText = leaks.join("\n");
+  }
 
-  rows.forEach(r => {
-    const repName = get(r, ["rep_name", "rep", "salesperson", "agent", "name", "employee", "sales_rep", "assigned_rep"]) || "Unknown";
-    const outcome = String(get(r, ["outcome", "result", "status", "disposition"]) || "").toLowerCase();
-    const dealAmount = parseNum(get(r, ["deal_amount", "deal_value", "revenue", "amount", "price", "value", "sale_value", "contract_value"]));
-    const followupDone = ["yes", "y", "1", "true"].includes(
-      String(get(r, ["followup_done", "follow_up_completed", "followup", "follow_up", "follow_up_scheduled", "callback"]) || "").toLowerCase()
-    );
-    const responseTime = String(get(r, ["response_time", "response_time_days", "response"]) || "");
-    const customerType = get(r, ["customer_type", "type", "customer"]) || "Unknown";
-    const contactMethod = get(r, ["contact_method", "method", "contacted_via", "channel"]) || "Unknown";
+  // Overall date span + recency.
+  const dateInfos = infos.filter((i) => i.type === "date" && i.maxDate);
+  let recencyText = "No date column detected.";
+  if (dateInfos.length) {
+    const newest = new Date(Math.max(...dateInfos.map((i) => i.maxDate!.getTime())));
+    const oldest = new Date(Math.min(...dateInfos.map((i) => i.minDate!.getTime())));
+    const daysOld = Math.round((Date.now() - newest.getTime()) / 86400000);
+    recencyText = `Date span: ${oldest.toISOString().slice(0, 10)} → ${newest.toISOString().slice(0, 10)}. Newest record is ${daysOld} day(s) old.`;
+  }
 
-    const closedVal = parseNum(get(r, ["closed", "closes", "sales", "sold", "won", "deals_closed"]));
-    const isClosed = outcome.includes("closed") || outcome.includes("won") || closedVal > 0;
+  const colDetail = infos.filter((i) => i.type !== "empty").map((i) => {
+    const fill = `${Math.round(i.fill * 100)}% filled`;
+    if (i.type === "date") return `  - ${i.col} — date, ${fill}, ${i.minDate?.toISOString().slice(0, 10)} → ${i.maxDate?.toISOString().slice(0, 10)}`;
+    if (i.type === "money") return `  - ${i.col} — money, ${fill}, total $${Math.round(i.sum || 0).toLocaleString()}, avg $${Math.round(i.avg || 0).toLocaleString()}, range $${Math.round(i.min || 0).toLocaleString()}–$${Math.round(i.max || 0).toLocaleString()}`;
+    if (i.type === "number") return `  - ${i.col} — number, ${fill}, total ${Math.round(i.sum || 0).toLocaleString()}, avg ${(i.avg || 0).toFixed(1)}`;
+    if (i.type === "category") return `  - ${i.col} — category, ${fill}, ${i.distinct} values: ${i.dist!.map(([v, c]) => `${v} (${c})`).join(", ")}`;
+    return `  - ${i.col} — text, ${fill}, ${i.distinct} distinct values`;
+  }).join("\n");
 
-    if (!repMetrics[repName]) repMetrics[repName] = { contacts: 0, closes: 0, revenue: 0 };
-    repMetrics[repName].contacts++;
-    if (isClosed) { repMetrics[repName].closes++; repMetrics[repName].revenue += dealAmount; }
+  const moneyText = moneyCol
+    ? `Primary value column: ${moneyCol.col} — total $${Math.round(moneyCol.sum || 0).toLocaleString()} across ${moneyCol.nonEmpty.length} rows, avg $${Math.round(moneyCol.avg || 0).toLocaleString()}.`
+    : "No clear money column detected — dollar-denominate cautiously.";
 
-    if (!customerTypeMetrics[customerType]) customerTypeMetrics[customerType] = { contacts: 0, closes: 0, revenue: 0 };
-    customerTypeMetrics[customerType].contacts++;
-    if (isClosed) { customerTypeMetrics[customerType].closes++; customerTypeMetrics[customerType].revenue += dealAmount; }
-
-    const normalizedResponseTime =
-      responseTime.toLowerCase().includes("same") || responseTime === "0" ? "same-day" :
-      parseInt(responseTime) >= 3 ? "3+ days" : "1-2 days";
-    if (!responseTimeMetrics[normalizedResponseTime]) responseTimeMetrics[normalizedResponseTime] = { contacts: 0, closes: 0 };
-    responseTimeMetrics[normalizedResponseTime].contacts++;
-    if (isClosed) responseTimeMetrics[normalizedResponseTime].closes++;
-
-    if (!contactMethodMetrics[contactMethod]) contactMethodMetrics[contactMethod] = { contacts: 0, closes: 0 };
-    contactMethodMetrics[contactMethod].contacts++;
-    if (isClosed) contactMethodMetrics[contactMethod].closes++;
-
-    if (!isClosed && !followupDone) unfollowedLeads++;
-    if (isClosed) { totalCloses++; totalRevenue += dealAmount; }
-
-    const timeVal = get(r, ["time_of_day", "time", "hour", "knock_time", "visit_time", "start_time"]);
-    if (timeVal) {
-      const cleaned = timeVal.trim().toLowerCase();
-      let hour = -1;
-      if (cleaned.includes(":")) {
-        hour = parseInt(cleaned.split(":")[0]);
-        if (cleaned.includes("pm") && hour < 12) hour += 12;
-        if (cleaned.includes("am") && hour === 12) hour = 0;
-      } else if (/^\d+$/.test(cleaned)) { hour = parseInt(cleaned); }
-      if (hour >= 0 && hour <= 23) {
-        let slot = "Unknown";
-        if (hour >= 8 && hour < 12) slot = "Morning (8am-12pm)";
-        else if (hour >= 12 && hour < 15) slot = "Early Afternoon (12pm-3pm)";
-        else if (hour >= 15 && hour < 18) slot = "Late Afternoon (3pm-6pm)";
-        else if (hour >= 18) slot = "Evening (6pm+)";
-        else slot = "Early Morning (before 8am)";
-        if (!timeMap[slot]) timeMap[slot] = { knocked: 0, closed: 0 };
-        timeMap[slot].knocked += parseNum(get(r, ["knocked", "knocks", "doors", "visits"])) || 1;
-        if (isClosed) timeMap[slot].closed++;
-      }
-    }
-
-    const dateVal = get(r, ["date", "visit_date", "knock_date", "activity_date"]);
-    if (dateVal) {
-      const d = parseDate(dateVal);
-      if (d) {
-        const day = dayNames[d.getDay()];
-        if (!dayMap[day]) dayMap[day] = { knocked: 0, closed: 0 };
-        dayMap[day].knocked += parseNum(get(r, ["knocked", "knocks", "doors", "visits"])) || 1;
-        if (isClosed) dayMap[day].closed++;
-      }
-    }
-
-    const zip = get(r, ["zip", "zipcode", "zip_code", "postal_code", "territory", "area", "region"]);
-    if (zip) {
-      if (!zipMap[zip]) zipMap[zip] = { knocked: 0, closed: 0 };
-      zipMap[zip].knocked += parseNum(get(r, ["knocked", "knocks", "doors", "visits"])) || 1;
-      if (isClosed) zipMap[zip].closed++;
-    }
-  });
-
-  const totalContacts = totalRows;
-  const overallCloseRate = ((totalCloses / totalContacts) * 100).toFixed(1);
-  const avgDealValue = totalCloses > 0 ? (totalRevenue / totalCloses) : 0;
-
-  const repSummary = Object.entries(repMetrics)
-    .map(([rep, m]) => {
-      const rate = ((m.closes / m.contacts) * 100).toFixed(1);
-      const avg = m.closes > 0 ? (m.revenue / m.closes).toFixed(0) : "0";
-      return `  - ${rep}: ${m.closes}/${m.contacts} closes (${rate}%), $${m.revenue.toLocaleString()} revenue, $${avg} avg deal`;
-    }).join("\n");
-
-  const customerTypeSummary = Object.entries(customerTypeMetrics)
-    .map(([type, m]) => {
-      const rate = ((m.closes / m.contacts) * 100).toFixed(1);
-      const avg = m.closes > 0 ? (m.revenue / m.closes).toFixed(0) : "0";
-      return `  - ${type}: ${m.closes}/${m.contacts} closes (${rate}%), $${m.revenue.toLocaleString()} revenue, $${avg} avg deal`;
-    }).join("\n");
-
-  const responseTimeSummary = Object.entries(responseTimeMetrics)
-    .map(([time, m]) => {
-      const rate = ((m.closes / m.contacts) * 100).toFixed(1);
-      return `  - ${time}: ${m.closes}/${m.contacts} closes (${rate}%)`;
-    }).join("\n");
-
-  const contactMethodSummary = Object.entries(contactMethodMetrics)
-    .map(([method, m]) => {
-      const rate = ((m.closes / m.contacts) * 100).toFixed(1);
-      return `  - ${method}: ${m.closes}/${m.contacts} closes (${rate}%)`;
-    }).join("\n");
-
-  const timeSummary = Object.entries(timeMap)
-    .map(([slot, m]) => {
-      const rate = m.knocked > 0 ? ((m.closed / m.knocked) * 100).toFixed(1) : "0";
-      return `  - ${slot}: ${m.knocked} knocks, ${m.closed} closes, ${rate}% close rate`;
-    }).join("\n");
-
-  const daySummary = Object.entries(dayMap)
-    .map(([day, m]) => {
-      const rate = m.knocked > 0 ? ((m.closed / m.knocked) * 100).toFixed(1) : "0";
-      return `  - ${day}: ${m.knocked} knocks, ${m.closed} closes, ${rate}% close rate`;
-    }).join("\n");
-
-  const topZips = Object.entries(zipMap)
-    .sort((a, b) => (b[1].closed / (b[1].knocked || 1)) - (a[1].closed / (a[1].knocked || 1)))
-    .slice(0, 5)
-    .map(([zip, m]) => {
-      const rate = m.knocked > 0 ? ((m.closed / m.knocked) * 100).toFixed(1) : "0";
-      return `  - ${zip}: ${m.knocked} knocks, ${m.closed} closes, ${rate}% close rate`;
-    }).join("\n");
-
-  const dateVals = rows.map(r => findColumn(r, ["date", "visit_date", "knock_date", "activity_date"])).filter(Boolean);
+  const sampleRows = rows.slice(0, 5).map((r, idx) => {
+    const obj: Record<string, string> = {};
+    cols.slice(0, 12).forEach((c) => {
+      const v = (r[c] ?? "").toString().trim();
+      if (v) obj[c] = v.length > 40 ? v.slice(0, 40) + "…" : v;
+    });
+    return `  ${idx + 1}) ${JSON.stringify(obj)}`;
+  }).join("\n");
 
   return `
-# SALES DATA SUMMARY
+# BUSINESS DATA PROFILE
 
-Total Contacts: ${totalContacts}
-Total Closes: ${totalCloses}
-Overall Close Rate: ${overallCloseRate}%
-Total Revenue: $${totalRevenue.toLocaleString()}
-Average Deal Value: $${avgDealValue.toLocaleString()}
-Unfollowed Leads: ${unfollowedLeads}
-Columns detected: ${columns.join(", ")}
-Date range: ${dateVals.length > 0 ? dateVals[0] + " to " + dateVals[dateVals.length - 1] : "N/A"}
+Rows: ${total}
+Columns (${cols.length}): ${cols.join(", ")}
 
-## REP PERFORMANCE
-${repSummary || "No rep data detected"}
+## COLUMN DETAIL
+${colDetail}
 
-## CUSTOMER TYPE PERFORMANCE
-${customerTypeSummary || "No customer type data detected"}
+## MONEY
+${moneyText}
 
-## RESPONSE TIME PERFORMANCE
-${responseTimeSummary || "No response time data detected"}
+## FUNNEL (status column: ${statusCol ? statusCol.col : "none detected"})
+${funnelText || "  No status/stage column detected — infer the funnel from dates and amounts."}
 
-## CONTACT METHOD PERFORMANCE
-${contactMethodSummary || "No contact method data detected"}
+## LIKELY LEAK SURFACES
+${leakText || "  No status-based leaks computed. Look for missing follow-up dates, aging open records, and gaps between created date and any contact/close date."}
 
-## TIME OF DAY BREAKDOWN
-${timeSummary || "No time data detected"}
+## RECENCY
+${recencyText}
 
-## DAY OF WEEK BREAKDOWN
-${daySummary || "No date data detected"}
-
-## TOP TERRITORIES/ZIPS BY CLOSE RATE
-${topZips || "No territory data detected"}
+## SAMPLE ROWS (raw)
+${sampleRows}
 `.trim();
 }
+
+/* ------------------------------------------------------------------ *
+ * Main action — plumbing identical to before.
+ * ------------------------------------------------------------------ */
 
 export async function analyzeUpload(uploadId: string, fileContent: string) {
   const supabase = createClient();
@@ -267,165 +294,142 @@ export async function analyzeUpload(uploadId: string, fileContent: string) {
 
     await supabase.from("uploads").update({ row_count: rowCount }).eq("id", uploadId);
 
-    const salesRecords = rows.map(r => {
-      const get = (candidates: string[]) => findColumn(r, candidates);
-      return {
-        upload_id: uploadId,
-        user_id: user.id,
-        rep_name: get(["rep_name", "rep", "salesperson", "agent", "name", "employee", "sales_rep", "assigned_rep"]) || null,
-        date: get(["date", "visit_date", "knock_date", "activity_date"]) || null,
-        time_of_day: get(["time_of_day", "time", "hour", "knock_time", "visit_time"]) || null,
-        address: get(["address", "street", "location"]) || null,
-        city: get(["city", "town"]) || null,
-        state: get(["state", "province"]) || null,
-        zip: get(["zip", "zipcode", "zip_code", "postal_code", "territory"]) || null,
-        knocked: Math.round(parseNum(get(["knocked", "knocks", "doors_knocked", "doors", "visits", "attempts"]))) || 1,
-        contacted: Math.round(parseNum(get(["contacted", "contacts", "contact", "reached"]))) || 0,
-        pitched: Math.round(parseNum(get(["pitched", "pitches", "presented", "demos"]))) || 0,
-        closed: Math.round(parseNum(get(["closed", "closes", "sales", "sold", "won", "deals_closed"]))) || 0,
-        deal_value: parseNum(get(["deal_value", "value", "revenue", "amount", "price", "sale_value", "deal_amount"])) || 0,
-        product: get(["product", "service", "package", "plan_type"]) || null,
-        follow_up_scheduled: ["1", "true", "yes", "y"].includes(
-          get(["follow_up", "followup", "follow_up_scheduled", "followup_done", "callback"]).toLowerCase()
-        ),
-        notes: get(["notes", "comments", "remarks"]) || null,
-      };
-    });
-
-    if (salesRecords.length > 0) {
-      await supabase.from("sales_records").insert(salesRecords);
+    // Best-effort row storage. Wrapped so a schema mismatch can never fail the analysis.
+    try {
+      const salesRecords = rows.map((r) => {
+        const get = (candidates: string[]) => findColumn(r, candidates);
+        return {
+          upload_id: uploadId,
+          user_id: user.id,
+          rep_name: get(["rep_name", "rep", "salesperson", "agent", "assigned", "owner", "technician", "tech", "employee", "name"]) || null,
+          date: get(["date", "created", "created_date", "job_date", "service_date", "activity_date"]) || null,
+          time_of_day: get(["time_of_day", "time", "hour", "start_time"]) || null,
+          address: get(["address", "street", "location"]) || null,
+          city: get(["city", "town"]) || null,
+          state: get(["state", "province"]) || null,
+          zip: get(["zip", "zipcode", "zip_code", "postal_code"]) || null,
+          knocked: 1,
+          contacted: 0,
+          pitched: 0,
+          closed: Math.round(parseNum(get(["closed", "won", "sold", "completed", "deals_closed"]))) || 0,
+          deal_value: parseNum(get(["deal_value", "value", "revenue", "amount", "price", "total", "invoice", "quote", "estimate"])) || 0,
+          product: get(["product", "service", "service_type", "job_type", "package", "plan_type"]) || null,
+          follow_up_scheduled: ["1", "true", "yes", "y"].includes(
+            get(["follow_up", "followup", "follow_up_scheduled", "followup_done", "callback"]).toLowerCase()
+          ),
+          notes: get(["notes", "comments", "remarks", "description"]) || null,
+        };
+      });
+      if (salesRecords.length > 0) await supabase.from("sales_records").insert(salesRecords);
+    } catch (recErr) {
+      console.error("sales_records insert skipped:", recErr);
     }
 
     const summary = buildSummary(rows);
 
-    const industryContext: Record<string, string> = {
-      solar: "Solar sales teams typically struggle with roof assessments, utility bill objections, financing conversations, and seasonal territory patterns. Key metrics are cost per watt, system size, and install-to-close time.",
-      pest: "Pest control teams focus on recurring service plans vs one-time treatments. Key metrics are service agreement rate, seasonal infestation patterns by ZIP, and upsell rate to annual plans.",
-      security: "Home security teams deal with renter vs owner objections, equipment cost resistance, and monitoring contract length. Key metrics are equipment package size, monitoring ARR, and referral rate from installs.",
-      telecom: "Telecom door-to-door teams compete with existing providers. Key metrics are switch rate, bundle attach rate, and churn prediction by neighborhood demographics.",
-      roofing: "Roofing teams are heavily weather and season dependent. Key metrics are storm chaser timing, insurance claim conversion, material upsell rate, and referral rate from completed jobs.",
-      insurance: "Insurance field teams face trust and complexity objections. Key metrics are policy bundle rate, referral conversion, follow-up close rate, and policy value per household.",
-      saas: "Field SaaS sales teams focus on decision maker access, trial conversion, and expansion revenue. Key metrics are demo-to-close rate, contract size, and time to first value.",
-      other: "Focus on territory efficiency, rep consistency, and follow-up conversion as universal sales metrics.",
+    // Light service-industry flavor by vertical. No door-knocking, no rep scorecards.
+    const verticalContext: Record<string, string> = {
+      pest: "Pest control: recurring plans vs one-offs, seasonal demand, missed renewals, and quotes that go cold.",
+      roofing: "Roofing: insurance/storm jobs, high-ticket estimates that sit unaccepted, and slow follow-up on bids.",
+      hvac: "HVAC: maintenance plans, emergency vs scheduled work, install quotes left open, and overdue invoices.",
+      landscaping: "Landscaping/lawn: recurring service retention, seasonal re-activation, and unconverted estimates.",
+      cleaning: "Commercial/residential cleaning: recurring contracts, churned accounts, and quote-to-booking gaps.",
+      security: "Home security: monitoring contracts, install scheduling, and abandoned quotes.",
+      solar: "Solar: long sales cycles, proposals that stall, and financing follow-up.",
+      insurance: "Insurance: policy follow-up, renewals, and referral conversion.",
+      staffing: "Staffing: open reqs, candidate/client follow-up speed, and placements that stall.",
+      other: "General service business: the money leaks live in slow lead response, unconverted quotes, no-shows, unpaid invoices, and missed repeat/review business.",
     };
+    const vertical = (profile?.business_type || "other").toLowerCase();
+    const verticalDetail = verticalContext[vertical] || verticalContext.other;
+    const businessContext = `\nBUSINESS CONTEXT\nThis is a small service business${profile?.business_type ? ` (${profile.business_type})` : ""}. ${verticalDetail}\nThe owner runs the business — there is no sales team to benchmark. Do NOT frame anything around individual reps.\n`;
 
-    const challengeContext: Record<string, string> = {
-      close_rate: "Pay special attention to close rate patterns by time, rep, and territory. Identify the highest and lowest performing segments and what differentiates them.",
-      follow_ups: "Focus heavily on follow-up data. Flag any warm leads that were not followed up on and estimate revenue impact. Identify patterns in when follow-ups convert.",
-      territory: "Analyze territory data deeply. Find ZIP codes or areas that are underworked relative to their conversion rate. Identify territory overlap or gaps.",
-      rep_performance: "Benchmark every rep against each other and against team average. Identify skill gaps, coaching opportunities, and reps at risk of burning out.",
-      data_visibility: "Focus on surfacing patterns the manager cannot see without data — time of day, day of week, territory, and rep benchmarking insights.",
-      time_of_day: "Do a deep analysis of time-of-day and day-of-week patterns. Find peak conversion windows and identify time being wasted in low-conversion periods.",
-    };
-
-    const businessType = profile?.business_type || "field sales";
-    const mainChallenge = profile?.main_challenge || "improving close rates";
-    const teamSize = profile?.team_size || "unknown";
-    const industryDetail = industryContext[businessType] || industryContext.other;
-    const challengeDetail = challengeContext[mainChallenge] || "";
-
-    const businessContext = profile?.business_type
-      ? `\nBUSINESS CONTEXT:\nIndustry: ${businessType} sales (${teamSize} reps)\nIndustry specifics: ${industryDetail}\nPrimary challenge: ${mainChallenge} — ${challengeDetail}\nTailor every insight to this specific industry and challenge.\n`
-      : "";
-
-    const perfectPrompt = `You are a world-class sales operations analyst. Your job is to find hidden revenue leaks and opportunities in sales data that founders don't see.
+    const perfectPrompt = `You are a revenue-leak diagnostician for small service businesses (landscaping, HVAC, roofing, pest control, cleaning, security, etc.). You are given a PROFILE of one business's exported data (any tool, any schema). Your job: find where money is leaking through their funnel and tie each leak to the agent that plugs it.
 ${businessContext}
-## ABSOLUTE RULES - DO NOT VIOLATE
-1. Return ONLY a JSON array. Nothing else. No markdown, no code blocks, no preamble, no explanation.
-2. Start with [ and end with ]
-3. Each object MUST have exactly these fields: priority, category, title, body, metric
-4. If you cannot generate valid JSON, return an empty array []
+The service funnel is: lead in → first response → quote/estimate → booking/scheduling → job done → invoice/payment → review & repeat. Money leaks at every seam.
 
-## Output Format (MUST BE VALID JSON)
+## ABSOLUTE RULES — DO NOT VIOLATE
+1. Return ONLY a JSON array. No markdown, no code fences, no preamble. Start with [ and end with ].
+2. Each object MUST have exactly: priority, category, title, body, metric.
+3. If you cannot produce valid JSON, return [].
+4. NEVER mention reps, salespeople, door-knocking, territories, or ZIP performance. This is an owner-run service business.
+5. NEVER mention missing columns or data quality. Work only with what the profile gives you.
+6. NEVER invent numbers. Every figure must come from the profile (funnel counts, dollar sums, dates, distributions).
+
+## OUTPUT FORMAT
 [
   {
     "priority": "critical|opportunity|pattern",
-    "category": "Rep Performance|Lead Quality|Sales Cycle|Follow-up|Conversion|Response Time|Customer Type|Pipeline|Deal Value|Contact Method|Revenue Leakage",
+    "category": "Lead Response|Follow-Up|Scheduling|Quote & Invoice|Reviews|Revenue Concentration|Revenue Leakage",
     "title": "Specific, quantified headline with the number",
-    "body": "2-3 sentences: the finding, why it matters, what it costs or gains",
-    "metric": "The single most important number (e.g., '0% close rate', '$120K lost', '100% conversion')"
+    "body": "2-3 sentences: the leak, what it's costing in dollars, and which agent fixes it. End with: 'Fix: deploy the <agent> agent to <action>.'",
+    "metric": "The single most important number (e.g. '$84K in idle quotes', '38% of leads', '120 jobs')"
   }
 ]
 
-## YOUR GOAL
-Generate 8-10 insights that would make a sales manager say "oh shit, I didn't know that" or "I need to fix that immediately."
+## CATEGORY = THE AGENT THAT FIXES IT
+- Lead Response → slow or missing first response to new leads
+- Follow-Up → quotes/estimates gone cold, dormant leads, no second touch
+- Scheduling → no-shows, cancellations, unfilled calendar gaps
+- Quote & Invoice → unaccepted quotes sitting open, overdue/unpaid invoices
+- Reviews → completed jobs with no review request or repeat outreach
+- Revenue Concentration / Revenue Leakage → structural risk (one service or period carrying revenue)
 
-## INSIGHT QUALITY CRITERIA
-An insight is ONLY good if it has ALL of these:
-1. CONCRETE NUMBER: A specific metric (not "high" or "low", but "0%", "$50K", "100%")
-2. COMPARISON: This vs that (Rep A vs Rep B, same-day vs 3-day, referral vs cold)
-3. IMPACT: Either revenue lost or revenue opportunity (in dollars or percentage)
-4. OWNERSHIP: Who specifically needs to act (rep name, customer type, time period)
-5. ACTION: A single, immediate, doable next step
+## GOAL
+Generate 8-10 insights that make an owner say "I'm losing HOW much?" Each must be:
+1. A CONCRETE NUMBER (count or dollars from the profile — never "some"/"many"/"a lot")
+2. A real leak (grounded in the funnel/leak surfaces, not pattern-matched)
+3. DOLLAR-DENOMINATED wherever a money column exists
+4. Tied to ONE agent that recovers it
+5. Actionable today
 
-## SCORING YOUR INSIGHTS
-Before returning an insight, ask yourself:
-- Would a manager pay $200/month to know this? YES -> Keep it
-- Is this a real pattern in the data or am I pattern-matching? Real -> Keep it
-- Can they act on this today? YES -> Keep it
-- Is this obvious/already known? NO -> Keep it
-- Am I making up numbers or extrapolating? NO -> Keep it
+## WHAT MAKES IT CRITICAL
+Money actively leaking now:
+- "$84,200 in Quotes Sitting Open 30+ Days — No Follow-Up"
+- "38% of New Leads Have No Recorded First Response"
+- "$22,400 in Invoices Are Overdue (14 unpaid)"
 
-## WHAT MAKES AN INSIGHT CRITICAL
-Critical insights are costing deals RIGHT NOW. Examples:
-- "Rep Sarah closes 0% of deals but is assigned 20% of leads (losing $150K/year)"
-- "Team never responds same-day but same-day converts 100% vs 20% for delayed"
-- "You're losing all referral leads to slow follow-up (they go cold in 24 hours)"
-- "Your premium customers ($300K+) only close with 1 rep (John) at 95%, others fail"
+## WHAT MAKES IT AN OPPORTUNITY
+Recoverable upside being left on the table:
+- "142 Completed Jobs, 0 Review Requests — Your Repeat Engine Is Off"
+- "Quoted Work Worth $310K Is Stalling at the Estimate Stage"
 
-## WHAT MAKES AN INSIGHT AN OPPORTUNITY
-Opportunities are untapped potential. Examples:
-- "Referral customers convert 100% but are only 10% of pipeline (should be 40%)"
-- "Commercial customers close faster ($2K deals in 2 days, residential in 5 days)"
-- "Your best rep (Marcus) closes $8.5K average deal, others average $5.2K (gap: $3.3K per deal)"
-- "Multi-family customers have 0% churn but you focus on single-family"
-
-## WHAT MAKES A PATTERN
-Patterns are trends worth monitoring. Examples:
-- "Close rate improves 3% for every day earlier in the week (Mon best, Fri worst)"
-- "Deals under $5K close in 2 days, over $10K close in 5 days (2.5x difference)"
-- "Customers who respond same-day close 60%, those who wait close 30%"
+## WHAT MAKES IT A PATTERN
+A trend worth monitoring:
+- "Drain Jobs Are 12% of Volume but 41% of Revenue"
+- "60% of Revenue Comes From One Service Line"
 
 ## EXAMPLES OF PERFECT INSIGHTS
 {
   "priority": "critical",
-  "category": "Rep Performance",
-  "title": "Sarah: 0% Close Rate On 60 Contacts ($312K Lost Revenue)",
-  "body": "Sarah has contacted 60 customers and closed 0 deals (0% close rate). Team average is 45% (28/62 deals closed). At $5.2K avg deal value, her 0 closes costs $312K in potential revenue. Marcus shows this is not a market problem, it is rep performance.",
-  "metric": "0% close rate vs 45% team avg = $312K lost"
+  "category": "Quote & Invoice",
+  "title": "$84,200 in Quotes Sitting Open With No Follow-Up",
+  "body": "26 quotes worth $84,200 are stuck at the 'quoted' stage and have not converted. Service-business quotes go cold fast — most are won or lost within 10 days. Leaving them untouched is the single biggest pool of recoverable revenue in this data. Fix: deploy the Follow-Up agent to chase every open quote on a cadence until it's won or explicitly dead.",
+  "metric": "$84,200 in idle quotes (26 deals)"
 },
 {
   "priority": "critical",
-  "category": "Response Time",
-  "title": "Same-Day Response = 100% Close (25/25) vs 3-Day = 20% (2/10)",
-  "body": "Contacts who respond same-day close 100% of the time (25 deals). Contacts who take 3+ days to respond close only 20% (2 deals). This 5x difference is your biggest conversion lever. Even moving from 3-day to 2-day response would unlock $50K+ in revenue.",
-  "metric": "Same-day = 100%, 3+ day = 20% (5x difference)"
+  "category": "Lead Response",
+  "title": "38% of Leads Have No Recorded First Response",
+  "body": "Of 210 leads, 80 (38%) sit in a new/uncontacted state with no first touch logged. Speed-to-lead is the highest-leverage number in any service business — response within minutes massively outperforms hours. Those 80 leads are bleeding to whoever called them back first. Fix: deploy the Lead Response agent to answer and qualify every new lead within seconds, 24/7.",
+  "metric": "38% of leads (80) never contacted"
 },
 {
   "priority": "opportunity",
-  "category": "Contact Method",
-  "title": "Referral Customers Are 100% Conversion vs 60% Door-Knock (3x More Effective)",
-  "body": "Referral customers (15 total) close 100% of the time. Door-knock customers (40 total) close 60% of the time. Your team spends 80% effort on door-knock, 20% on referrals. Flipping this ratio could double your close rate.",
-  "metric": "Referral 100% vs door-knock 60% = 3x better"
+  "category": "Reviews",
+  "title": "142 Completed Jobs, 0 Review Requests Sent",
+  "body": "142 jobs are marked complete but there's no sign of a review or repeat-business request. Reviews drive the next lead and repeat customers are the cheapest revenue you have. This is free upside being skipped on every finished job. Fix: deploy the Reviews agent to request a review after every completed job and route happy customers to repeat work.",
+  "metric": "142 jobs, 0 review requests"
 }
 
-## WARNINGS (DO NOT VIOLATE)
-- Never mention incomplete data or missing columns
-- Never use vague words like "some", "many", "potentially", "appears"
-- Never generate insights without specific numbers
-- Never give advice on metrics you cannot calculate from the data
-- Never compare against unknown benchmarks like industry average
-- Never make an insight critical unless it is actually costing deals
-- Never make an insight if the same pattern appears in all reps equally
-
 ## CALCULATION RULES
-- Close rate = closed deals / total contacts
-- Revenue impact = deals lost times avg deal value or deals gained times avg deal value
-- Follow-up execution rate = follow-ups completed / total contacts times 100%
-- Average deal value = total revenue / total closed deals
-- Lost revenue = unfollowed leads times average deal value
+- Use the funnel counts and dollar sums exactly as given in the profile.
+- "Idle quotes" / "open estimates" = the quoted-but-not-won bucket and its attached dollars.
+- "Overdue" = the unpaid/overdue bucket and its dollars.
+- Concentration = a category column where a small share of rows carries a large share of the money column.
+- If no money column exists, lead with counts and percentages instead of dollars.
 
-You are an expert. Generate insights that would be worth $200/month to a sales manager. Return ONLY a JSON array.`;
+Return ONLY the JSON array.`;
 
     const message = await anthropic.messages.create({
       model: "claude-sonnet-4-5",
@@ -433,45 +437,41 @@ You are an expert. Generate insights that would be worth $200/month to a sales m
       system: perfectPrompt,
       messages: [{
         role: "user",
-        content: `Analyze this sales data and generate 8-10 insights. Calculate metrics carefully and use the framework provided:\n\n${summary}`,
+        content: `Analyze this service business's data and surface 8-10 dollar-denominated revenue leaks, each tied to the agent that fixes it. Use the funnel and leak surfaces in the profile:\n\n${summary}`,
       }],
     });
 
     const responseText = message.content[0]?.type === "text" ? message.content[0].text : "";
 
-let insights: Array<{ priority: string; category: string; title: string; body: string; metric: string }> = [];
+    let insights: Array<{ priority: string; category: string; title: string; body: string; metric: string }> = [];
 
-if (responseText) {
-  try {
-    const cleaned = responseText.replace(/```json|```/g, "").trim();
-    const parsed = JSON.parse(cleaned);
-    if (Array.isArray(parsed) && parsed.length > 0) {
-      insights = parsed;
-    }
-  } catch {
-    try {
-      const match = responseText.match(/\[\s*\{[\s\S]*\}\s*\]/);
-      if (match) {
-        const parsed = JSON.parse(match[0]);
-        if (Array.isArray(parsed)) insights = parsed;
+    if (responseText) {
+      try {
+        const cleaned = responseText.replace(/```json|```/g, "").trim();
+        const parsed = JSON.parse(cleaned);
+        if (Array.isArray(parsed) && parsed.length > 0) insights = parsed;
+      } catch {
+        try {
+          const match = responseText.match(/\[\s*\{[\s\S]*\}\s*\]/);
+          if (match) {
+            const parsed = JSON.parse(match[0]);
+            if (Array.isArray(parsed)) insights = parsed;
+          }
+        } catch {
+          console.error("JSON parse failed, using fallback insight");
+        }
       }
-    } catch {
-      console.error("JSON parse failed, using fallback insight");
     }
-  }
-}
 
-if (!Array.isArray(insights) || insights.length === 0) {
-  insights = [{
-    priority: "pattern",
-    category: "Data Analysis",
-    title: "Data uploaded successfully — refine your CSV format",
-    body: "Your data was saved but structured insights could not be generated. This usually means your CSV has fewer than 10 rows or unusual column names. Try adding rep_name, knocked, closed, and date columns and upload again.",
-    metric: "Check CSV format",
-  }];
-}
-
-  
+    if (!Array.isArray(insights) || insights.length === 0) {
+      insights = [{
+        priority: "pattern",
+        category: "Revenue Leakage",
+        title: "Data uploaded — add a status, date, and amount column for a sharper diagnostic",
+        body: "Your data was saved but structured insights couldn't be generated. The engine reads any export, but it finds the most money when your file has a status/stage column (e.g. new, quoted, won, lost), a date column, and a dollar amount column. Add those and re-upload.",
+        metric: "Check CSV format",
+      }];
+    }
 
     await supabase
       .from("insights")
@@ -480,13 +480,13 @@ if (!Array.isArray(insights) || insights.length === 0) {
       .neq("upload_id", uploadId);
 
     const insightRows = insights
-      .filter(i => i.priority && i.category && i.title && i.body && i.metric)
+      .filter((i) => i.priority && i.category && i.title && i.body && i.metric)
       .slice(0, 10)
-      .map(insight => ({
+      .map((insight) => ({
         upload_id: uploadId,
         user_id: user.id,
         priority: ["critical", "opportunity", "pattern"].includes(insight.priority) ? insight.priority : "pattern",
-        category: insight.category || "General",
+        category: insight.category || "Revenue Leakage",
         title: insight.title,
         body: insight.body,
         metric: insight.metric || null,
@@ -495,13 +495,12 @@ if (!Array.isArray(insights) || insights.length === 0) {
 
     await supabase.from("insights").insert(insightRows);
     await supabase.from("uploads").update({ status: "complete", row_count: rowCount }).eq("id", uploadId);
-
- } catch (err) {
-  const errMsg = String(err);
-  if (errMsg.includes("NEXT_REDIRECT")) throw err;
-  await supabase.from("uploads").update({ status: "failed", error_message: errMsg }).eq("id", uploadId);
-  console.error("Upload error:", err);
-}
+  } catch (err) {
+    const errMsg = String(err);
+    if (errMsg.includes("NEXT_REDIRECT")) throw err;
+    await supabase.from("uploads").update({ status: "failed", error_message: errMsg }).eq("id", uploadId);
+    console.error("Upload error:", err);
+  }
 
   redirect("/dashboard");
 }
