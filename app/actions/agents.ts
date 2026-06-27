@@ -4,6 +4,7 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { runAgent } from "@/lib/agents/runner";
+import { sendEmail } from "@/lib/agents/send";
 import type { AgentType } from "@/lib/agents/types";
 
 export async function getAgents() {
@@ -43,10 +44,37 @@ export async function setAgentStatus(agentId: string, status: "active" | "paused
   return { error: error?.message ?? null };
 }
 
+// Approve or skip a pending action. Approving a held draft actually SENDS it.
 export async function resolveActivity(activityId: string, decision: "approved" | "skipped") {
   const supabase = createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: "unauthorized" };
+
+  if (decision === "approved") {
+    const { data: row } = await supabase
+      .from("agent_activity")
+      .select("payload")
+      .eq("id", activityId)
+      .eq("user_id", user.id)
+      .single();
+
+    const email = row?.payload?.email;
+    if (email?.to && email?.subject && email?.body && !row?.payload?.sent) {
+      const res = await sendEmail({ to: email.to, subject: email.subject, body: email.body });
+      await supabase
+        .from("agent_activity")
+        .update({
+          status: "approved",
+          needs_approval: false,
+          detail: res.sent ? `Approved — sent to ${email.to}.` : `Approved — send failed: ${res.reason}`,
+          payload: { ...(row?.payload || {}), sent: res.sent },
+        })
+        .eq("id", activityId)
+        .eq("user_id", user.id);
+      return { error: res.sent ? null : res.reason ?? "send failed" };
+    }
+  }
+
   const { error } = await supabase
     .from("agent_activity")
     .update({ status: decision, needs_approval: false })
@@ -55,7 +83,7 @@ export async function resolveActivity(activityId: string, decision: "approved" |
   return { error: error?.message ?? null };
 }
 
-// Manually fire an agent (handy for testing from a button or the console).
+// Manually fire an agent (used by the dashboard "Run a test action" button).
 export async function triggerAgent(type: AgentType, payload: Record<string, any> = {}) {
   const supabase = createClient();
   const { data: { user } } = await supabase.auth.getUser();

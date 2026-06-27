@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { dismissInsight } from "@/app/actions/insights";
+import { getAgents, listActivity, setAgentStatus, resolveActivity, triggerAgent } from "@/app/actions/agents";
 
 /* ------------------------------------------------------------------ *
  * Meridian — dashboard  (app/(dashboard)/dashboard/dashboard-client.tsx)
@@ -34,6 +35,7 @@ interface ActivityRow {
   tone: "ok" | "accent" | "warn";
   needs_approval: boolean;
   recovered_cents: number;
+  status?: string;
   created_at: string;
 }
 interface AgentRow {
@@ -46,6 +48,7 @@ interface AgentRow {
 interface DashboardClientProps {
   insights: Insight[];
   userName: string;
+  userEmail?: string;
   activity?: ActivityRow[];
   agents?: AgentRow[];
   goals?: unknown[];
@@ -148,7 +151,7 @@ const PRIORITY: Record<Insight["priority"], { label: string; color: string; tint
 
 /* ============================ component ============================ */
 
-export default function DashboardClient({ insights, userName, activity, agents }: DashboardClientProps) {
+export default function DashboardClient({ insights, userName, userEmail, activity, agents }: DashboardClientProps) {
   const [tab, setTab] = useState<"insights" | "activity" | "performance">("insights");
   const [filter, setFilter] = useState<"all" | Insight["priority"]>("all");
   const [expanded, setExpanded] = useState<string | null>(null);
@@ -156,16 +159,74 @@ export default function DashboardClient({ insights, userName, activity, agents }
   const [resolved, setResolved] = useState<Record<string, "approved" | "skipped">>({});
   const [mounted, setMounted] = useState(false);
 
-  const agentRows = agents && agents.length ? agents : DEMO_AGENTS;
-  const activityRows = activity && activity.length ? activity : DEMO_ACTIVITY;
-  const [agentState, setAgentState] = useState<Record<string, "active" | "paused">>(
-    Object.fromEntries(agentRows.map((a) => [a.id, a.status]))
-  );
+  // Live agent state — seeded from props, then self-fetches + polls the real tables.
+  const [liveAgents, setLiveAgents] = useState<AgentRow[]>(agents && agents.length ? agents : DEMO_AGENTS);
+  const [liveActivity, setLiveActivity] = useState<ActivityRow[]>(activity && activity.length ? activity : DEMO_ACTIVITY);
+  const [realMode, setRealMode] = useState<boolean>(!!(agents && agents.length));
+  const [busy, setBusy] = useState<string | null>(null);
 
   useEffect(() => {
     const t = setTimeout(() => setMounted(true), 60);
     return () => clearTimeout(t);
   }, []);
+
+  // Pull real agents + activity on mount, then poll every 5s while the tab is visible.
+  useEffect(() => {
+    let alive = true;
+    let stop = false;
+    async function pull() {
+      try {
+        const [ag, act] = await Promise.all([getAgents(), listActivity(60)]);
+        if (!alive) return;
+        if (ag && ag.length) {
+          setRealMode(true);
+          setLiveAgents(ag as AgentRow[]);
+          setLiveActivity((act as ActivityRow[]) || []);
+        } else {
+          stop = true; // no agents yet — stay on sample data, stop polling
+        }
+      } catch {
+        stop = true;
+      }
+    }
+    pull();
+    const id = setInterval(() => {
+      if (stop) { clearInterval(id); return; }
+      if (!document.hidden) pull();
+    }, 5000);
+    return () => { alive = false; clearInterval(id); };
+  }, []);
+
+  async function toggleAgent(a: AgentRow) {
+    const next = a.status === "active" ? "paused" : "active";
+    setLiveAgents((prev) => prev.map((x) => (x.id === a.id ? { ...x, status: next } : x)));
+    if (realMode) {
+      setBusy(a.id);
+      await setAgentStatus(a.id, next).catch(() => {});
+      setBusy(null);
+    }
+  }
+
+  async function resolveAct(row: ActivityRow, decision: "approved" | "skipped") {
+    setResolved((p) => ({ ...p, [row.id]: decision }));
+    if (realMode) await resolveActivity(row.id, decision).catch(() => {});
+  }
+
+  async function runTest(type: string) {
+    if (!realMode) return;
+    setBusy(type);
+    try {
+      await triggerAgent(type as Parameters<typeof triggerAgent>[0], {
+        name: "Test Lead",
+        service: "demo run",
+        message: "Triggered from your dashboard to test the agent.",
+        ...(userEmail ? { email: userEmail } : {}),
+      });
+      const act = await listActivity(60);
+      setLiveActivity((act as ActivityRow[]) || []);
+    } catch {}
+    setBusy(null);
+  }
 
   const hour = new Date().getHours();
   const greeting = hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
@@ -186,9 +247,9 @@ export default function DashboardClient({ insights, userName, activity, agents }
     await dismissInsight(id);
   }
 
-  const byAgent = agentRows.map((a) => {
-    const rows = activityRows.filter((r) => r.agent_type === a.type);
-    const on = agentState[a.id] === "active";
+  const byAgent = liveAgents.map((a) => {
+    const rows = liveActivity.filter((r) => r.agent_type === a.type);
+    const on = a.status === "active";
     return {
       ...a,
       on,
@@ -226,7 +287,13 @@ export default function DashboardClient({ insights, userName, activity, agents }
         .md-mount { opacity:0; transform:translateY(14px); transition:opacity .6s cubic-bezier(.2,.8,.2,1), transform .6s cubic-bezier(.2,.8,.2,1); }
         .md-mount.in { opacity:1; transform:none; }
         .live-dot { width:7px; height:7px; border-radius:999px; background:#28c840; animation:mpulse 2s infinite; }
+        .live-dot.idle { background:#b8b8bd; animation:none; }
         .barfill { height:8px; border-radius:999px; background:linear-gradient(90deg,var(--accent),var(--accent2)); transition:width .8s cubic-bezier(.2,.8,.2,1); }
+        .scan { position:relative; height:5px; border-radius:999px; background:rgba(0,0,0,0.06); overflow:hidden; }
+        .scan.on::after { content:""; position:absolute; top:0; bottom:0; left:-45%; width:45%; border-radius:999px; background:linear-gradient(90deg,transparent,var(--accent),var(--accent2),transparent); animation:scan 1.3s ease-in-out infinite; }
+        .cursor::after { content:""; display:inline-block; width:2px; height:1em; background:var(--accent); margin-left:4px; vertical-align:-2px; animation:blink 1s step-end infinite; }
+        @keyframes scan { 0%{left:-45%} 100%{left:100%} }
+        @keyframes blink { 50%{opacity:0} }
         @keyframes mpulse { 0%{box-shadow:0 0 0 0 rgba(40,200,64,.5)} 70%{box-shadow:0 0 0 7px rgba(40,200,64,0)} 100%{box-shadow:0 0 0 0 rgba(40,200,64,0)} }
         @keyframes mdrift { 0%,100%{transform:translate(0,0) scale(1)} 50%{transform:translate(28px,-36px) scale(1.07)} }
         @media (prefers-reduced-motion: no-preference){ .md-blob{animation:mdrift 22s ease-in-out infinite} }
@@ -364,8 +431,36 @@ export default function DashboardClient({ insights, userName, activity, agents }
           </div>
         )}
 
-        {tab === "activity" && (
-          <div className={`md-mount ${mounted ? "in" : ""} space-y-6`} style={{ transitionDelay: "160ms" }}>
+        {tab === "activity" && (() => {
+          const latest = liveActivity[0];
+          const working = latest ? Date.now() - new Date(latest.created_at).getTime() < 25000 : false;
+          const pending = liveActivity.filter((r) => r.needs_approval && !resolved[r.id] && r.status !== "approved" && r.status !== "skipped").length;
+          return (
+          <div className={`md-mount ${mounted ? "in" : ""} space-y-5`} style={{ transitionDelay: "160ms" }}>
+
+            {/* live console */}
+            <div className="glass rounded-[26px] p-6">
+              <div className="flex items-center gap-2 mb-4">
+                <span className={`live-dot ${working ? "" : "idle"}`} />
+                <span className="text-sm font-semibold">{working ? "Working now" : "Agents idle"}</span>
+                <span className="md-mono text-[11px] text-[var(--muted)] ml-auto">{realMode ? "live · updates every 5s" : "sample data"}</span>
+              </div>
+              <div className="rounded-2xl px-4 py-4" style={{ background: "rgba(0,0,0,0.025)", border: "1px solid rgba(0,0,0,0.05)" }}>
+                <div className="flex items-center gap-2 mb-3 min-w-0">
+                  <span className="md-mono text-[11px] text-[var(--muted)] shrink-0">{latest ? (AGENT_LABEL[latest.agent_type] ?? latest.agent_type) : "Meridian"}</span>
+                  <span className="md-mono text-[11px] text-[var(--muted)] shrink-0">›</span>
+                  <span className={`text-sm font-medium truncate ${working ? "cursor" : ""}`}>{latest ? latest.action : "Waiting for the next action…"}</span>
+                </div>
+                <div className={`scan ${working ? "on" : ""}`} />
+                <div className="mt-3 flex items-center gap-5 text-[12px] text-[var(--muted)]">
+                  <span><span className="font-semibold text-[var(--ink)] tabular-nums">{handled}</span> actions</span>
+                  <span><span className="font-semibold text-[var(--ink)] tabular-nums">{activeAgents}</span> live agents</span>
+                  <span><span className="font-semibold text-[var(--ink)] tabular-nums">{pending}</span> need approval</span>
+                </div>
+              </div>
+            </div>
+
+            {/* agents */}
             <div>
               <h2 className="text-lg font-semibold tracking-tight mb-4">Your agents</h2>
               <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3">
@@ -375,31 +470,40 @@ export default function DashboardClient({ insights, userName, activity, agents }
                       <span className="w-9 h-9 rounded-xl grid place-items-center" style={{ background: a.on ? "linear-gradient(135deg,var(--accent),var(--accent2))" : "rgba(0,0,0,0.08)" }}>
                         <span className="w-2.5 h-2.5 rounded-full" style={{ background: a.on ? "#fff" : "var(--muted)" }} />
                       </span>
-                      <button onClick={() => setAgentState((p) => ({ ...p, [a.id]: a.on ? "paused" : "active" }))} className="text-[11px] font-semibold px-2.5 py-1 rounded-full transition" style={a.on ? { background: "rgba(40,200,64,0.12)", color: "#1aa251" } : { background: "rgba(0,0,0,0.06)", color: "var(--muted)" }}>
+                      <span className="text-[11px] font-semibold px-2.5 py-1 rounded-full" style={a.on ? { background: "rgba(40,200,64,0.12)", color: "#1aa251" } : { background: "rgba(0,0,0,0.06)", color: "var(--muted)" }}>
                         {a.on ? "Active" : "Paused"}
-                      </button>
+                      </span>
                     </div>
                     <h3 className="mt-4 font-semibold tracking-tight leading-snug">{a.name}</h3>
                     <div className="mt-3 flex items-center justify-between text-sm">
                       <span className="text-[var(--muted)]">{a.on ? `${a.actions} actions` : "Idle"}</span>
                       <span className="font-semibold tabular-nums">{a.on ? money(a.recovered) : "—"}</span>
                     </div>
-                    <button onClick={() => setAgentState((p) => ({ ...p, [a.id]: a.on ? "paused" : "active" }))} className="mt-4 w-full text-sm font-semibold py-2 rounded-full border border-black/8 hover:bg-black/[0.03] transition">
-                      {a.on ? "Pause agent" : "Resume agent"}
+                    <button onClick={() => toggleAgent(a)} disabled={busy === a.id} className="mt-4 w-full text-sm font-semibold py-2 rounded-full border border-black/8 hover:bg-black/[0.03] transition disabled:opacity-50">
+                      {busy === a.id ? "…" : a.on ? "Pause agent" : "Resume agent"}
                     </button>
+                    {realMode && (
+                      <button onClick={() => runTest(a.type)} disabled={busy === a.type || !a.on} className="mt-2 w-full text-[12px] font-semibold py-1.5 rounded-full text-[var(--accent)] hover:bg-[rgba(10,132,255,0.06)] transition disabled:opacity-40">
+                        {busy === a.type ? "Running…" : "Run a test action"}
+                      </button>
+                    )}
                   </div>
                 ))}
               </div>
             </div>
 
+            {/* feed */}
             <div className="glass rounded-[26px] overflow-hidden">
               <div className="flex items-center gap-3 px-6 py-4 border-b border-black/5">
-                <h2 className="font-semibold tracking-tight">Live activity</h2>
-                <span className="inline-flex items-center gap-1.5 md-mono text-[11px] text-[var(--muted)] ml-auto"><span className="live-dot" /> updating</span>
+                <h2 className="font-semibold tracking-tight">Activity feed</h2>
+                <span className="inline-flex items-center gap-1.5 md-mono text-[11px] text-[var(--muted)] ml-auto"><span className={`live-dot ${working ? "" : "idle"}`} /> {realMode ? "live" : "sample"}</span>
               </div>
-              <div className="divide-y divide-black/5">
-                {activityRows.map((r) => {
-                  const state = resolved[r.id];
+              <div className="divide-y divide-black/5 max-h-[440px] overflow-y-auto">
+                {liveActivity.length === 0 ? (
+                  <div className="px-6 py-10 text-center text-sm text-[var(--muted)]">No actions yet. Resume an agent and run a test, or wait for the next event.</div>
+                ) : liveActivity.map((r) => {
+                  const state = resolved[r.id] || (r.status === "approved" ? "approved" : r.status === "skipped" ? "skipped" : undefined);
+                  const pendingRow = r.needs_approval && !state;
                   return (
                     <div key={r.id} className="px-6 py-3.5">
                       <div className="flex items-center gap-4">
@@ -407,12 +511,12 @@ export default function DashboardClient({ insights, userName, activity, agents }
                         <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: r.tone === "warn" ? "#e0922f" : r.tone === "accent" ? "var(--accent)" : "#28c840" }} />
                         <div className="min-w-0 flex-1">
                           <p className="text-sm font-medium truncate">{r.action}</p>
-                          <p className="text-[12px] text-[var(--muted)] truncate">{AGENT_LABEL[r.agent_type] ?? r.agent_type} · {r.detail}</p>
+                          <p className="text-[12px] text-[var(--muted)] truncate">{AGENT_LABEL[r.agent_type] ?? r.agent_type}{r.detail ? ` · ${r.detail}` : ""}</p>
                         </div>
-                        {r.needs_approval && !state && (
+                        {pendingRow && (
                           <div className="flex items-center gap-2 shrink-0">
-                            <button onClick={() => setResolved((p) => ({ ...p, [r.id]: "approved" }))} className="btn-primary !py-1.5 !px-3 !text-[13px]">Approve</button>
-                            <button onClick={() => setResolved((p) => ({ ...p, [r.id]: "skipped" }))} className="text-[13px] font-semibold px-3 py-1.5 rounded-full border border-black/8 hover:bg-black/[0.03] transition">Skip</button>
+                            <button onClick={() => resolveAct(r, "approved")} className="btn-primary !py-1.5 !px-3 !text-[13px]">Approve</button>
+                            <button onClick={() => resolveAct(r, "skipped")} className="text-[13px] font-semibold px-3 py-1.5 rounded-full border border-black/8 hover:bg-black/[0.03] transition">Skip</button>
                           </div>
                         )}
                         {r.needs_approval && state && (
@@ -424,9 +528,10 @@ export default function DashboardClient({ insights, userName, activity, agents }
                 })}
               </div>
             </div>
-            <p className="text-xs text-[var(--muted)] text-center">{activity && activity.length ? "Live agent activity." : "Showing sample activity until your agents are connected."}</p>
+            <p className="text-xs text-[var(--muted)] text-center">{realMode ? "Connected to your agents — live." : "Showing sample activity until your agents are connected."}</p>
           </div>
-        )}
+          );
+        })()}
 
         {tab === "performance" && (
           <div className={`md-mount ${mounted ? "in" : ""} space-y-5`} style={{ transitionDelay: "160ms" }}>
@@ -489,7 +594,7 @@ export default function DashboardClient({ insights, userName, activity, agents }
                 ))}
               </div>
             </div>
-            <p className="text-xs text-[var(--muted)] text-center">{activity && activity.length ? "Live agent performance." : "Sample performance until your agents are connected."}</p>
+            <p className="text-xs text-[var(--muted)] text-center">{realMode ? "Live agent performance." : "Sample performance until your agents are connected."}</p>
           </div>
         )}
       </div>
