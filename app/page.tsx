@@ -277,6 +277,50 @@ function Mark({ size = 22 }: { size?: number }) {
   );
 }
 
+/* -------------------------------------------------- reactive background */
+
+function Background() {
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    let raf = 0;
+    const onScroll = () => {
+      cancelAnimationFrame(raf);
+      raf = requestAnimationFrame(() => {
+        const h = document.documentElement;
+        el.style.setProperty("--p", clamp(h.scrollTop / (h.scrollHeight - h.clientHeight || 1)).toFixed(4));
+      });
+    };
+    const onMove = (e: PointerEvent) => {
+      if (e.pointerType === "touch") return;
+      el.style.setProperty("--mx", (e.clientX / (window.innerWidth || 1)).toFixed(3));
+      el.style.setProperty("--my", (e.clientY / (window.innerHeight || 1)).toFixed(3));
+    };
+    window.addEventListener("scroll", onScroll, { passive: true });
+    window.addEventListener("resize", onScroll);
+    window.addEventListener("pointermove", onMove, { passive: true });
+    onScroll();
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+      window.removeEventListener("resize", onScroll);
+      window.removeEventListener("pointermove", onMove);
+      cancelAnimationFrame(raf);
+    };
+  }, []);
+  return (
+    <div ref={ref} aria-hidden className="bg-field">
+      <div className="bg-aurora" />
+      <div className="bg-blob b1" />
+      <div className="bg-blob b2" />
+      <div className="bg-blob b3" />
+      <div className="bg-blob b4" />
+      <div className="bg-grid" />
+      <div className="bg-spot" />
+    </div>
+  );
+}
+
 /* -------------------------------------------------- page */
 
 export default function Landing() {
@@ -491,14 +535,75 @@ export default function Landing() {
         }
         @keyframes drift {
           0%, 100% { transform: translate(0, 0) scale(1); }
-          50% { transform: translate(30px, -40px) scale(1.08); }
+          50% { transform: translate(28px, -36px) scale(1.07); }
         }
-        @media (prefers-reduced-motion: no-preference) {
-          .blob { animation: drift 22s ease-in-out infinite; }
+
+        /* ---- scroll/pointer-reactive background ---- */
+        .bg-field {
+          position: fixed; inset: 0; z-index: 0; overflow: hidden;
+          background: var(--field);
+          --p: 0; --mx: 0.5; --my: 0.32;
+        }
+        .bg-blob {
+          position: absolute; border-radius: 999px; filter: blur(120px);
+          will-change: transform, opacity;
+        }
+        .bg-blob.b1 {
+          width: 62vw; max-width: 700px; aspect-ratio: 1; top: -14vh; left: -8vw;
+          background: #bcd4ff; opacity: 0.5;
+          transform: translate3d(calc(var(--p) * 36px), calc(var(--p) * -170px), 0) scale(calc(1 + var(--p) * 0.06));
+          animation: drift 26s ease-in-out infinite;
+        }
+        .bg-blob.b2 {
+          width: 56vw; max-width: 640px; aspect-ratio: 1; top: 26vh; right: -10vw;
+          background: #e2d4ff; opacity: calc(0.28 + var(--p) * 0.3);
+          transform: translate3d(0, calc(var(--p) * 150px), 0);
+          animation: drift 30s ease-in-out infinite -6s;
+        }
+        .bg-blob.b3 {
+          width: 54vw; max-width: 580px; aspect-ratio: 1; bottom: -12vh; left: 22vw;
+          background: #cdeede; opacity: calc(0.16 + var(--p) * 0.34);
+          transform: translate3d(0, calc(var(--p) * -120px), 0);
+          animation: drift 32s ease-in-out infinite -12s;
+        }
+        .bg-blob.b4 {
+          width: 40vw; max-width: 460px; aspect-ratio: 1; top: 58vh; left: 4vw;
+          background: #bfeaff; opacity: calc(0.1 + var(--p) * 0.3);
+          transform: translate3d(0, calc(var(--p) * -70px), 0);
+          animation: drift 28s ease-in-out infinite -3s;
+        }
+        .bg-aurora {
+          position: absolute; inset: -25%;
+          background: conic-gradient(from 0deg at 50% 50%,
+            rgba(10, 132, 255, 0.05), rgba(106, 92, 255, 0.06),
+            rgba(40, 200, 120, 0.045), rgba(10, 132, 255, 0.05));
+          filter: blur(36px);
+          transform: rotate(calc(var(--p) * 48deg)) scale(1.1);
+          will-change: transform;
+        }
+        .bg-grid {
+          position: absolute; inset: 0;
+          background-image: radial-gradient(rgba(0, 0, 0, 0.05) 1px, transparent 1px);
+          background-size: 34px 34px;
+          opacity: calc(0.45 - var(--p) * 0.32);
+          transform: translateY(calc(var(--p) * 60px));
+          -webkit-mask-image: radial-gradient(ellipse 78% 58% at 50% 28%, #000 28%, transparent 76%);
+          mask-image: radial-gradient(ellipse 78% 58% at 50% 28%, #000 28%, transparent 76%);
+        }
+        .bg-spot {
+          position: absolute; inset: 0;
+          background: radial-gradient(440px circle at calc(var(--mx) * 100%) calc(var(--my) * 100%),
+            rgba(10, 132, 255, 0.1), transparent 60%);
+        }
+
+        @media (max-width: 640px) {
+          .bg-blob { filter: blur(72px); }
+          .bg-blob.b4, .bg-aurora, .bg-grid, .bg-spot { display: none; }
         }
         @media (prefers-reduced-motion: reduce) {
           .reveal { opacity: 1 !important; transform: none !important; }
           .meridian-fill { transition: none; }
+          .bg-blob, .bg-aurora { animation: none !important; }
         }
         *:focus-visible {
           outline: 2px solid var(--accent);
@@ -507,12 +612,8 @@ export default function Landing() {
         }
       `}</style>
 
-      {/* ambient field + soft color so glass has something to refract */}
-      <div aria-hidden className="fixed inset-0 z-0 overflow-hidden" style={{ background: "var(--field)" }}>
-        <div className="blob absolute -top-32 -left-24 w-[620px] h-[620px] rounded-full" style={{ background: "#bcd4ff", opacity: 0.5, filter: "blur(130px)" }} />
-        <div className="blob absolute top-40 -right-32 w-[560px] h-[560px] rounded-full" style={{ background: "#e2d4ff", opacity: 0.45, filter: "blur(130px)", animationDelay: "-6s" }} />
-        <div className="blob absolute bottom-0 left-1/3 w-[520px] h-[520px] rounded-full" style={{ background: "#cdeede", opacity: 0.4, filter: "blur(140px)", animationDelay: "-12s" }} />
-      </div>
+      {/* ambient field — scroll- & pointer-reactive */}
+      <Background />
 
       {/* scroll progress */}
       <div
@@ -534,7 +635,10 @@ export default function Landing() {
               <button onClick={() => scrollTo("agents")} className="hover:text-[var(--ink)] transition">Agents</button>
               <button onClick={() => scrollTo("pricing")} className="hover:text-[var(--ink)] transition">Pricing</button>
             </div>
-            <button onClick={openDemo} className="btn-primary !py-2 !px-4 !text-sm">Book a demo</button>
+            <div className="flex items-center gap-1 sm:gap-3">
+              <Link href="/login" className="text-sm font-medium text-[var(--muted)] hover:text-[var(--ink)] transition px-2.5 py-2">Log in</Link>
+              <button onClick={openDemo} className="btn-primary !py-2 !px-3.5 sm:!px-4 !text-sm whitespace-nowrap">Book a demo</button>
+            </div>
           </div>
         </nav>
 
@@ -651,45 +755,31 @@ export default function Landing() {
           </div>
         </section>
 
-        {/* ---------------------------------------------- PRICING */}
+        {/* ---------------------------------------------- FREE ANALYSIS */}
         <section id="pricing" className="px-5 py-20 md:py-28 scroll-mt-24">
           <div className="max-w-4xl mx-auto">
             <Reveal className="text-center max-w-2xl mx-auto mb-14">
               <span className="font-mono text-xs tracking-[0.2em] uppercase grad-text font-semibold">Pricing</span>
               <h2 className="mt-3 text-3xl md:text-5xl font-semibold tracking-tight">
-                Less than a hire. Working a lot harder.
+                Start with a free analysis.
               </h2>
               <p className="mt-4 text-[var(--muted)] text-lg">
-                A one-time build, then a flat monthly to run and tune the agent. Scoped to the work it does.
+                We run the diagnostic on your real numbers and show you exactly where you&apos;re leaking — before you spend a dollar. Pricing is scoped to your business, and we walk you through it on the call.
               </p>
             </Reveal>
 
             <Reveal>
-              <div className="glass rounded-[32px] p-8 md:p-12">
-                <div className="grid md:grid-cols-2 gap-8 md:gap-10">
-                  <div className="md:border-r md:border-black/8 md:pr-10">
-                    <div className="font-mono text-xs tracking-[0.15em] uppercase text-[var(--muted)]">Setup &amp; build</div>
-                    <div className="mt-2 flex items-end gap-2">
-                      <span className="text-5xl font-semibold tracking-tight">$2–5K</span>
-                      <span className="text-[var(--muted)] mb-1.5 text-sm">one-time</span>
-                    </div>
-                    <p className="mt-3 text-[15px] text-[var(--muted)] leading-relaxed">
-                      Full diagnostic, the agent built and tuned to your data, and your live dashboard — set up in days.
-                    </p>
-                  </div>
-                  <div>
-                    <div className="font-mono text-xs tracking-[0.15em] uppercase text-[var(--muted)]">Run &amp; tune</div>
-                    <div className="mt-2 flex items-end gap-2">
-                      <span className="text-5xl font-semibold tracking-tight grad-text">$2–5K</span>
-                      <span className="text-[var(--muted)] mb-1.5 text-sm">/ month</span>
-                    </div>
-                    <p className="mt-3 text-[15px] text-[var(--muted)] leading-relaxed">
-                      The agent runs, we monitor and tune, you keep recovering. Price scales with the agent's scope.
-                    </p>
-                  </div>
+              <div className="glass rounded-[32px] p-8 md:p-12 text-center">
+                <span className="font-mono text-xs tracking-[0.15em] uppercase text-[var(--muted)]">Revenue leak analysis</span>
+                <div className="mt-3 flex items-end justify-center gap-2.5">
+                  <span className="text-6xl md:text-7xl font-semibold tracking-tight grad-text">Free</span>
+                  <span className="text-[var(--muted)] mb-2 text-sm">no commitment</span>
                 </div>
+                <p className="mt-4 text-[15px] md:text-base text-[var(--muted)] leading-relaxed max-w-xl mx-auto">
+                  Bring your data and we&apos;ll find the leaks live on a short call. If you want an agent to plug them, we scope it together — pricing depends on the work it does, and we&apos;ll lay it out for you then.
+                </p>
 
-                <ul className="mt-9 grid sm:grid-cols-2 gap-x-8 gap-y-3 border-t border-black/8 pt-8">
+                <ul className="mt-9 grid sm:grid-cols-2 gap-x-8 gap-y-3 border-t border-black/8 pt-8 text-left max-w-2xl mx-auto">
                   {INCLUDED.map((x) => (
                     <li key={x} className="flex gap-3 text-[15px]">
                       <span className="mt-1.5 w-1.5 h-1.5 rounded-full shrink-0" style={{ background: "linear-gradient(120deg,var(--accent),var(--accent2))" }} />
@@ -699,10 +789,10 @@ export default function Landing() {
                 </ul>
 
                 <button onClick={openDemo} className="btn-primary justify-center w-full mt-9">
-                  Book a demo
+                  Get my free analysis
                 </button>
-                <p className="mt-4 text-center text-xs text-[var(--muted)]">
-                  20-minute call. We run the diagnostic on your numbers and show you the leaks before you commit.
+                <p className="mt-4 text-xs text-[var(--muted)]">
+                  20-minute call · No commitment · See the leaks before you decide
                 </p>
               </div>
             </Reveal>
