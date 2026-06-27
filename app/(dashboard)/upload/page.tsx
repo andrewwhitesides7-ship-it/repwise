@@ -11,17 +11,17 @@ type Provider = "hubspot" | "salesforce" | "pipedrive";
 const crmConfig: Record<Provider, { name: string; logo: string; description: string; connectUrl: string }> = {
   hubspot: { name: "HubSpot", logo: "🟠", description: "Contacts, deals, and pipeline activity", connectUrl: "/api/auth/hubspot" },
   salesforce: { name: "Salesforce", logo: "☁️", description: "Opportunities, accounts, and activities", connectUrl: "/api/auth/salesforce" },
-  pipedrive: { name: "Pipedrive", logo: "🟢", description: "Deals, contacts, and rep activity", connectUrl: "/api/auth/pipedrive" },
+  pipedrive: { name: "Pipedrive", logo: "🟢", description: "Deals, contacts, and activity", connectUrl: "/api/auth/pipedrive" },
 };
 
 const stages = [
   "Reading your CSV...",
-  "Parsing sales records...",
-  "Building activity summary...",
-  "Analyzing close rates by rep...",
-  "Finding time of day patterns...",
-  "Identifying territory insights...",
-  "Generating AI insights...",
+  "Profiling your columns...",
+  "Mapping your funnel...",
+  "Pricing each stage...",
+  "Hunting revenue leaks...",
+  "Matching agents to fixes...",
+  "Generating your report...",
   "Saving your results...",
 ];
 
@@ -145,126 +145,127 @@ function UploadPageInner() {
   }
 
   return (
-    <div className="min-h-screen bg-[#080810] p-5 md:p-7">
-      <div className="max-w-4xl mx-auto">
+    <div className="md-root relative min-h-screen text-[var(--ink)] antialiased p-5 md:p-7">
+      <link rel="preconnect" href="https://fonts.googleapis.com" />
+      <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+
+      <style jsx global>{`
+        :root { --ink:#1d1d1f; --muted:#6e6e73; --field:#f5f5f7; --accent:#0a84ff; --accent2:#6a5cff; }
+        .md-root { font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","SF Pro Text","Inter",system-ui,sans-serif; letter-spacing:-0.01em; }
+        .md-mono { font-family:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,monospace; letter-spacing:0; }
+        .grad-text { background:linear-gradient(120deg,var(--accent),var(--accent2)); -webkit-background-clip:text; background-clip:text; color:transparent; }
+        .glass { position:relative; background:linear-gradient(135deg,rgba(255,255,255,0.72),rgba(255,255,255,0.42)); backdrop-filter:blur(22px) saturate(180%); -webkit-backdrop-filter:blur(22px) saturate(180%); border:1px solid rgba(255,255,255,0.7); box-shadow:0 10px 40px rgba(20,24,40,0.08), inset 0 1px 0 rgba(255,255,255,0.9); }
+        .btn-primary { display:inline-flex; align-items:center; justify-content:center; gap:.5rem; font-size:.875rem; font-weight:600; color:#fff; padding:.8rem 1.1rem; border-radius:14px; width:100%; background:linear-gradient(120deg,var(--accent),var(--accent2)); box-shadow:0 8px 24px rgba(10,132,255,.32), inset 0 1px 0 rgba(255,255,255,.4); transition:transform .2s ease, filter .2s ease; }
+        .btn-primary:hover { transform:translateY(-1px); filter:brightness(1.05); }
+        @keyframes mdrift { 0%,100%{transform:translate(0,0) scale(1)} 50%{transform:translate(28px,-36px) scale(1.07)} }
+        @media (prefers-reduced-motion: no-preference){ .md-blob{animation:mdrift 22s ease-in-out infinite} }
+        *:focus-visible { outline:2px solid var(--accent); outline-offset:3px; border-radius:6px; }
+      `}</style>
+
+      <div aria-hidden className="fixed inset-0 z-0 overflow-hidden" style={{ background: "var(--field)" }}>
+        <div className="md-blob absolute -top-32 -left-24 w-[560px] h-[560px] rounded-full" style={{ background: "#bcd4ff", opacity: 0.4, filter: "blur(130px)" }} />
+        <div className="md-blob absolute top-40 -right-32 w-[520px] h-[520px] rounded-full" style={{ background: "#e2d4ff", opacity: 0.38, filter: "blur(130px)", animationDelay: "-7s" }} />
+        <div className="md-blob absolute bottom-0 left-1/3 w-[480px] h-[480px] rounded-full" style={{ background: "#cdeede", opacity: 0.32, filter: "blur(140px)", animationDelay: "-13s" }} />
+      </div>
+
+      <div className="relative z-10 max-w-4xl mx-auto">
 
         {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-2xl font-black text-white mb-1">Upload Sales Data</h1>
-          <p className="text-gray-500 text-sm">Upload a CSV or connect your CRM to get AI-powered insights in minutes.</p>
+        <div className="mb-7">
+          <h1 className="text-2xl md:text-[28px] font-semibold tracking-tight mb-1">Upload your business data</h1>
+          <p className="text-[var(--muted)] text-sm">Drop a CSV or connect your CRM and Meridian will find where revenue is leaking.</p>
         </div>
 
         <div className="grid md:grid-cols-5 gap-5">
 
           {/* Upload area */}
           <div className="md:col-span-3">
-            <div className="bg-[#0d0d18] border border-white/6 rounded-2xl p-6">
+            <div className="glass rounded-[24px] p-6">
               <div className="flex items-center gap-3 mb-5">
-                <div className="w-9 h-9 bg-blue-500/10 border border-blue-500/20 rounded-xl flex items-center justify-center">
-                  <svg className="w-4 h-4 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <div className="w-9 h-9 rounded-xl grid place-items-center" style={{ background: "rgba(10,132,255,0.1)", border: "1px solid rgba(10,132,255,0.2)" }}>
+                  <svg className="w-4 h-4" style={{ color: "var(--accent)" }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                   </svg>
                 </div>
                 <div>
-                  <h2 className="text-white font-bold text-sm">CSV Upload</h2>
-                  <p className="text-gray-600 text-xs">Export from any CRM or spreadsheet</p>
+                  <h2 className="font-semibold text-sm tracking-tight">CSV upload</h2>
+                  <p className="text-[var(--muted)] text-xs">Export from any CRM, field tool, or spreadsheet</p>
                 </div>
               </div>
 
               {!loading ? (
                 <>
                   <div
-                    onDragOver={e => { e.preventDefault(); setDragging(true); }}
+                    onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
                     onDragLeave={() => setDragging(false)}
                     onDrop={handleDrop}
                     onClick={() => inputRef.current?.click()}
-                    className={"border-2 border-dashed rounded-2xl p-10 text-center cursor-pointer transition-all duration-200 " + (
-                      dragging ? "border-blue-500 bg-blue-500/5 scale-[1.01]" :
-                      file ? "border-emerald-500/40 bg-emerald-500/5" :
-                      "border-white/8 hover:border-white/15 hover:bg-white/3"
-                    )}
+                    className="rounded-2xl p-10 text-center cursor-pointer transition-all duration-200"
+                    style={
+                      dragging ? { border: "2px dashed var(--accent)", background: "rgba(10,132,255,0.05)" }
+                      : file ? { border: "2px dashed rgba(26,162,81,0.5)", background: "rgba(26,162,81,0.05)" }
+                      : { border: "2px dashed rgba(0,0,0,0.12)", background: "rgba(255,255,255,0.3)" }
+                    }
                   >
-                    <input
-                      ref={inputRef}
-                      type="file"
-                      accept=".csv"
-                      onChange={e => {
-                        const f = e.target.files?.[0];
-                        if (f?.name.endsWith(".csv")) { setFile(f); setError(""); }
-                        else setError("Only .csv files are accepted.");
-                      }}
-                      className="hidden"
-                    />
+                    <input ref={inputRef} type="file" accept=".csv" onChange={(e) => {
+                      const f = e.target.files?.[0];
+                      if (f?.name.endsWith(".csv")) { setFile(f); setError(""); }
+                      else setError("Only .csv files are accepted.");
+                    }} className="hidden" />
                     {file ? (
                       <div className="flex flex-col items-center gap-3">
-                        <div className="w-14 h-14 bg-emerald-500/10 rounded-2xl flex items-center justify-center border border-emerald-500/20">
-                          <svg className="w-7 h-7 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                          </svg>
+                        <div className="w-14 h-14 rounded-2xl grid place-items-center" style={{ background: "rgba(26,162,81,0.1)", border: "1px solid rgba(26,162,81,0.2)" }}>
+                          <svg className="w-7 h-7" style={{ color: "#1aa251" }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                         </div>
                         <div>
-                          <p className="text-white font-bold text-sm">{file.name}</p>
-                          <p className="text-gray-600 text-xs mt-0.5">{(file.size / 1024).toFixed(1)} KB · Click to change</p>
+                          <p className="font-semibold text-sm">{file.name}</p>
+                          <p className="text-[var(--muted)] text-xs mt-0.5">{(file.size / 1024).toFixed(1)} KB · Click to change</p>
                         </div>
                       </div>
                     ) : (
                       <div className="flex flex-col items-center gap-3">
-                        <div className="w-14 h-14 bg-white/4 rounded-2xl flex items-center justify-center border border-white/8">
-                          <svg className="w-7 h-7 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
-                          </svg>
+                        <div className="w-14 h-14 rounded-2xl grid place-items-center" style={{ background: "rgba(255,255,255,0.6)", border: "1px solid rgba(0,0,0,0.06)" }}>
+                          <svg className="w-7 h-7 text-[var(--muted)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" /></svg>
                         </div>
                         <div>
-                          <p className="text-white font-bold text-sm">Drop your CSV here</p>
-                          <p className="text-gray-600 text-xs mt-0.5">or click to browse files</p>
+                          <p className="font-semibold text-sm">Drop your CSV here</p>
+                          <p className="text-[var(--muted)] text-xs mt-0.5">or click to browse files</p>
                         </div>
-                        <span className="text-xs text-gray-600 bg-white/4 border border-white/8 px-3 py-1 rounded-full">.csv files only</span>
+                        <span className="text-xs text-[var(--muted)] px-3 py-1 rounded-full" style={{ background: "rgba(255,255,255,0.6)", border: "1px solid rgba(0,0,0,0.06)" }}>.csv files only</span>
                       </div>
                     )}
                   </div>
 
                   {error && (
-                    <div className="mt-3 bg-red-500/8 border border-red-500/20 rounded-xl px-4 py-3 flex items-center gap-2">
-                      <svg className="w-4 h-4 text-red-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                      </svg>
-                      <p className="text-red-400 text-sm">{error}</p>
+                    <div className="mt-3 rounded-xl px-4 py-3 flex items-center gap-2" style={{ background: "rgba(229,72,77,0.08)", border: "1px solid rgba(229,72,77,0.2)" }}>
+                      <svg className="w-4 h-4 flex-shrink-0" style={{ color: "#e5484d" }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
+                      <p className="text-sm" style={{ color: "#c93b40" }}>{error}</p>
                     </div>
                   )}
 
                   {file && (
-                    <button
-                      onClick={handleSubmit}
-                      className="mt-4 w-full bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl px-4 py-3 text-sm transition-all duration-200 shadow-lg shadow-blue-600/25 hover:-translate-y-0.5 flex items-center justify-center gap-2"
-                    >
-                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
-                      </svg>
-                      Analyze with AI
+                    <button onClick={handleSubmit} className="btn-primary mt-4">
+                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" /></svg>
+                      Find my revenue leaks
                     </button>
                   )}
                 </>
               ) : (
                 <div className="py-12 flex flex-col items-center gap-6">
                   <div className="relative w-20 h-20">
-                    <div className="absolute inset-0 rounded-full border-4 border-white/5" />
-                    <div className="absolute inset-0 rounded-full border-4 border-blue-500 border-t-transparent animate-spin" />
-                    <div className="absolute inset-0 flex items-center justify-center text-2xl">🧠</div>
+                    <div className="absolute inset-0 rounded-full" style={{ border: "4px solid rgba(0,0,0,0.06)" }} />
+                    <div className="absolute inset-0 rounded-full animate-spin" style={{ border: "4px solid var(--accent)", borderTopColor: "transparent" }} />
                   </div>
                   <div className="text-center">
-                    <p className="text-white font-bold mb-1">{stages[stageIndex]}</p>
-                    <p className="text-gray-600 text-sm">This usually takes 30-60 seconds</p>
+                    <p className="font-semibold mb-1">{stages[stageIndex]}</p>
+                    <p className="text-[var(--muted)] text-sm">This usually takes 30-60 seconds</p>
                   </div>
                   <div className="flex gap-1">
                     {stages.map((_, i) => (
-                      <div
-                        key={i}
-                        className={"h-1 rounded-full transition-all duration-300 " + (
-                          i === stageIndex ? "bg-blue-500 w-8" :
-                          i < stageIndex ? "bg-blue-800 w-6" :
-                          "bg-white/8 w-6"
-                        )}
-                      />
+                      <div key={i} className="h-1 rounded-full transition-all duration-300" style={{
+                        width: i === stageIndex ? 32 : 24,
+                        background: i === stageIndex ? "var(--accent)" : i < stageIndex ? "rgba(10,132,255,0.4)" : "rgba(0,0,0,0.1)",
+                      }} />
                     ))}
                   </div>
                 </div>
@@ -274,35 +275,35 @@ function UploadPageInner() {
 
           {/* Right panel */}
           <div className="md:col-span-2 space-y-4">
-            <div className="bg-[#0d0d18] border border-white/6 rounded-2xl p-5">
-              <h3 className="text-white font-bold text-sm mb-3">Recommended columns</h3>
+            <div className="glass rounded-[24px] p-5">
+              <h3 className="font-semibold text-sm tracking-tight mb-1">Columns that unlock the most</h3>
+              <p className="text-[var(--muted)] text-xs mb-3">Meridian reads any export — these three light up the funnel.</p>
               <div className="space-y-2">
                 {[
-                  { col: "rep_name", desc: "Sales rep name", required: true },
-                  { col: "date", desc: "Activity date", required: true },
-                  { col: "knocked", desc: "Doors knocked", required: true },
-                  { col: "closed", desc: "Deals closed", required: true },
-                  { col: "deal_value", desc: "Deal amount", required: false },
-                  { col: "zip", desc: "ZIP / territory", required: false },
-                  { col: "time_of_day", desc: "Time (HH:MM)", required: false },
-                ].map(col => (
+                  { col: "status", desc: "Stage (new, quoted, won)", required: true },
+                  { col: "date", desc: "Any date column", required: true },
+                  { col: "amount", desc: "Job / quote / invoice $", required: true },
+                  { col: "service", desc: "Service or job type", required: false },
+                  { col: "customer", desc: "Customer name", required: false },
+                  { col: "follow_up", desc: "Follow-up date", required: false },
+                ].map((col) => (
                   <div key={col.col} className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <code className="text-blue-400 text-xs bg-blue-500/8 border border-blue-500/15 px-1.5 py-0.5 rounded">{col.col}</code>
-                      <span className="text-gray-600 text-xs">{col.desc}</span>
+                      <code className="md-mono text-xs px-1.5 py-0.5 rounded" style={{ color: "var(--accent)", background: "rgba(10,132,255,0.08)", border: "1px solid rgba(10,132,255,0.15)" }}>{col.col}</code>
+                      <span className="text-[var(--muted)] text-xs">{col.desc}</span>
                     </div>
-                    <span className={"text-xs px-1.5 py-0.5 rounded-full " + (col.required ? "bg-red-500/8 text-red-400 border border-red-500/15" : "bg-white/4 text-gray-600")}>
-                      {col.required ? "Required" : "Optional"}
+                    <span className="text-xs px-1.5 py-0.5 rounded-full" style={col.required ? { color: "#c93b40", background: "rgba(229,72,77,0.08)", border: "1px solid rgba(229,72,77,0.15)" } : { color: "var(--muted)", background: "rgba(0,0,0,0.04)" }}>
+                      {col.required ? "Best" : "Bonus"}
                     </span>
                   </div>
                 ))}
               </div>
             </div>
 
-            <div className="bg-[#0d0d18] border border-white/6 rounded-2xl p-5">
+            <div className="glass rounded-[24px] p-5">
               <div className="flex items-center justify-between mb-3">
-                <h3 className="text-white font-bold text-sm">Recent uploads</h3>
-                <a href="/history" className="text-xs text-blue-400 hover:text-blue-300 transition-colors duration-200">View all →</a>
+                <h3 className="font-semibold text-sm tracking-tight">Recent uploads</h3>
+                <a href="/history" className="text-xs font-medium text-[var(--accent)] hover:opacity-80 transition">View all →</a>
               </div>
               <RecentUploads />
             </div>
@@ -310,55 +311,37 @@ function UploadPageInner() {
         </div>
 
         {/* CRM Integrations */}
-        <div className="mt-5 bg-[#0d0d18] border border-white/6 rounded-2xl p-6">
-          <div className="flex items-center justify-between mb-5">
-            <div className="flex items-center gap-3">
-              <div className="w-9 h-9 bg-purple-500/10 border border-purple-500/20 rounded-xl flex items-center justify-center">
-                <svg className="w-4 h-4 text-purple-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
-                </svg>
-              </div>
-              <div>
-                <h2 className="text-white font-bold text-sm">CRM Integrations</h2>
-                <p className="text-gray-600 text-xs">Connect your CRM for automatic daily syncing</p>
-              </div>
+        <div className="mt-5 glass rounded-[24px] p-6">
+          <div className="flex items-center gap-3 mb-5">
+            <div className="w-9 h-9 rounded-xl grid place-items-center" style={{ background: "rgba(106,92,255,0.1)", border: "1px solid rgba(106,92,255,0.2)" }}>
+              <svg className="w-4 h-4" style={{ color: "var(--accent2)" }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" /></svg>
+            </div>
+            <div>
+              <h2 className="font-semibold text-sm tracking-tight">CRM integrations</h2>
+              <p className="text-[var(--muted)] text-xs">Connect your CRM for automatic daily syncing</p>
             </div>
           </div>
           <div className="grid md:grid-cols-3 gap-3">
-            {(Object.keys(crmConfig) as Provider[]).map(provider => {
+            {(Object.keys(crmConfig) as Provider[]).map((provider) => {
               const crm = crmConfig[provider];
               const isConnected = connections[provider];
               const isSyncing = syncing === provider;
               return (
-                <div
-                  key={provider}
-                  className={"flex items-center gap-3 p-4 rounded-xl border transition-all duration-200 " + (
-                    isConnected ? "bg-white/4 border-emerald-500/20" : "bg-white/2 border-white/6"
-                  )}
-                >
-                  <div className="w-10 h-10 bg-white/4 rounded-xl flex items-center justify-center text-xl border border-white/8 flex-shrink-0">
-                    {crm.logo}
-                  </div>
+                <div key={provider} className="flex items-center gap-3 p-4 rounded-xl" style={{ background: "rgba(255,255,255,0.5)", border: isConnected ? "1px solid rgba(26,162,81,0.3)" : "1px solid rgba(0,0,0,0.06)" }}>
+                  <div className="w-10 h-10 rounded-xl grid place-items-center text-xl flex-shrink-0" style={{ background: "rgba(255,255,255,0.7)", border: "1px solid rgba(0,0,0,0.06)" }}>{crm.logo}</div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
-                      <span className="text-white text-sm font-bold">{crm.name}</span>
-                      {isConnected && <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />}
+                      <span className="text-sm font-semibold">{crm.name}</span>
+                      {isConnected && <span className="w-1.5 h-1.5 rounded-full" style={{ background: "#1aa251" }} />}
                     </div>
-                    <p className="text-gray-600 text-xs truncate">{crm.description}</p>
+                    <p className="text-[var(--muted)] text-xs truncate">{crm.description}</p>
                   </div>
                   {isConnected ? (
-                    <button
-                      onClick={() => handleSync(provider)}
-                      disabled={!!syncing}
-                      className="text-xs text-blue-400 bg-blue-500/10 border border-blue-500/20 hover:bg-blue-500/20 disabled:opacity-50 px-2.5 py-1.5 rounded-lg transition-all duration-200"
-                    >
+                    <button onClick={() => handleSync(provider)} disabled={!!syncing} className="text-xs font-semibold px-2.5 py-1.5 rounded-lg transition disabled:opacity-50" style={{ color: "var(--accent)", background: "rgba(10,132,255,0.1)", border: "1px solid rgba(10,132,255,0.2)" }}>
                       {isSyncing ? "..." : "Sync"}
                     </button>
                   ) : (
-                    <button
-                      onClick={() => { window.location.href = crm.connectUrl; }}
-                      className="text-xs text-gray-400 bg-white/4 border border-white/8 hover:bg-white/8 px-2.5 py-1.5 rounded-lg transition-all duration-200"
-                    >
+                    <button onClick={() => { window.location.href = crm.connectUrl; }} className="text-xs font-semibold px-2.5 py-1.5 rounded-lg transition" style={{ color: "var(--ink)", background: "rgba(255,255,255,0.7)", border: "1px solid rgba(0,0,0,0.08)" }}>
                       Connect
                     </button>
                   )}
@@ -391,28 +374,18 @@ function RecentUploads() {
     load();
   }, []);
 
-  if (!uploads.length) return <p className="text-gray-600 text-xs">No uploads yet.</p>;
+  if (!uploads.length) return <p className="text-[var(--muted)] text-xs">No uploads yet.</p>;
 
   return (
     <div className="space-y-2">
-      {uploads.map(u => (
+      {uploads.map((u) => (
         <div key={u.id} className="flex items-center gap-3">
-          <div className={"w-2 h-2 rounded-full flex-shrink-0 " + (
-            u.status === "complete" ? "bg-emerald-400" :
-            u.status === "failed" ? "bg-red-400" :
-            "bg-yellow-400 animate-pulse"
-          )} />
+          <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: u.status === "complete" ? "#1aa251" : u.status === "failed" ? "#e5484d" : "#e0922f" }} />
           <div className="flex-1 min-w-0">
-            <p className="text-white text-xs font-medium truncate">{u.file_name}</p>
-            <p className="text-gray-600 text-xs">{new Date(u.created_at).toLocaleDateString()}</p>
+            <p className="text-xs font-medium truncate">{u.file_name}</p>
+            <p className="text-[var(--muted)] text-xs">{new Date(u.created_at).toLocaleDateString()}</p>
           </div>
-          <span className={"text-xs " + (
-            u.status === "complete" ? "text-emerald-400" :
-            u.status === "failed" ? "text-red-400" :
-            "text-yellow-400"
-          )}>
-            {u.status}
-          </span>
+          <span className="text-xs font-medium" style={{ color: u.status === "complete" ? "#1aa251" : u.status === "failed" ? "#e5484d" : "#e0922f" }}>{u.status}</span>
         </div>
       ))}
     </div>
@@ -421,7 +394,7 @@ function RecentUploads() {
 
 export default function UploadPage() {
   return (
-    <Suspense fallback={<div className="p-8 text-gray-500 text-sm">Loading...</div>}>
+    <Suspense fallback={<div className="p-8 text-[var(--muted)] text-sm">Loading...</div>}>
       <UploadPageInner />
     </Suspense>
   );
