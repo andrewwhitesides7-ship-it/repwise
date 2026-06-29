@@ -41,7 +41,7 @@ export default function ResetPasswordPage() {
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
           <Link href="/" className="text-2xl font-bold text-white">
-            Try<span className="text-blue-500">RepWise</span>
+            Try<span className="text-blue-500">Adunda</span>
           </Link>
         </div>
         <div className="bg-gray-900 border border-gray-800 rounded-3xl p-8">
@@ -101,3 +101,4 @@ export default function ResetPasswordPage() {
     </div>
   );
 }
+

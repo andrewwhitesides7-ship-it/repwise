@@ -53,7 +53,7 @@ export default function ReferralsClient({ stats, isPaid }: { stats: ReferralStat
     <div className="p-4 md:p-8 max-w-4xl mx-auto">
       <div className="mb-8">
         <h1 className="text-2xl font-bold text-white mb-1">Refer and Earn</h1>
-        <p className="text-gray-400 text-sm">Share RepWise and earn 20 dollars per month cash via Venmo for every person who stays subscribed.</p>
+        <p className="text-gray-400 text-sm">Share Adunda and earn 20 dollars per month cash via Venmo for every person who stays subscribed.</p>
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
@@ -116,7 +116,7 @@ export default function ReferralsClient({ stats, isPaid }: { stats: ReferralStat
         <h2 className="text-white font-semibold mb-4">How it works</h2>
         <div className="space-y-4">
           {[
-            { icon: "🔗", title: "Share your link", desc: "Send your unique link to anyone in field sales who could use RepWise." },
+            { icon: "🔗", title: "Share your link", desc: "Send your unique link to anyone in field sales who could use Adunda." },
             { icon: "💳", title: "They sign up and pay", desc: "When they start a paid plan using your link you earn 20 dollars added to your balance." },
             { icon: "🔄", title: "Earn every month", desc: "As long as they stay subscribed you keep earning 20 dollars per month. No cap on referrals." },
             { icon: "💸", title: "Get paid via Venmo", desc: "We send your balance to your Venmo on the 1st of each month automatically." },

@@ -1,11 +1,11 @@
-// Meridian agent stack — the agents' "hands". Sends real email via Resend.
+// Adunda agent stack — the agents' "hands". Sends real email via Resend.
 // Wrapped so a missing key or send failure never throws into agent runs.
 
 import { Resend } from "resend";
 
 const resend = new Resend(process.env.RESEND_API_KEY || "");
 // Must be a verified sender on your Resend domain (tryrepwise.com).
-const FROM = process.env.AGENT_FROM_EMAIL || "Meridian <andrew@tryrepwise.com>";
+const FROM = process.env.AGENT_FROM_EMAIL || "Adunda <andrew@tryrepwise.com>";
 
 export async function sendEmail(opts: { to: string; subject: string; body: string }): Promise<{ sent: boolean; id?: string; reason?: string }> {
   if (!process.env.RESEND_API_KEY) return { sent: false, reason: "RESEND_API_KEY not set" };

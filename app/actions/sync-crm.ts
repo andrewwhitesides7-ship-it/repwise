@@ -45,7 +45,11 @@ export async function syncCRM(provider: string) {
     .eq("user_id", user.id)
     .eq("provider", provider)
     .single();
-
+const { data: profile } = await supabase
+  .from("users")
+  .select("plan")
+  .eq("id", user.id)
+  .single();
   if (!connection) throw new Error("CRM not connected");
 if (profile?.plan === "free") {
   const { count: uploadCount } = await supabase
@@ -127,7 +131,7 @@ ${stageSummary}
   const message = await anthropic.messages.create({
     model: "claude-sonnet-4-5",
     max_tokens: 3000,
-    system: `You are RepWise, an AI sales intelligence engine. Analyze this CRM data and generate 8-10 specific, actionable insights. Return ONLY a JSON array with exactly 8-10 items. Each insight object: { priority: "critical"|"opportunity"|"pattern", category: string, title: string (under 10 words, action-oriented), body: string (2-3 sentences with specific numbers from the data), metric: string (key number or stat) }. No preamble, no markdown, just raw JSON array.`,
+    system: `You are Adunda, an AI sales intelligence engine. Analyze this CRM data and generate 8-10 specific, actionable insights. Return ONLY a JSON array with exactly 8-10 items. Each insight object: { priority: "critical"|"opportunity"|"pattern", category: string, title: string (under 10 words, action-oriented), body: string (2-3 sentences with specific numbers from the data), metric: string (key number or stat) }. No preamble, no markdown, just raw JSON array.`,
     messages: [{
       role: "user",
       content: `Analyze this HubSpot CRM data and generate exactly 8-10 insights:\n\n${summary}`,

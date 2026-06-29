@@ -50,7 +50,7 @@ export async function createCheckoutSession(plan: PlanId) {
     allow_promotion_codes: true,
     payment_method_collection: "always",
     subscription_data: {
-      trial_period_days: 14,
+      trial_period_days: 7,
       trial_settings: {
         end_behavior: {
           missing_payment_method: "cancel",

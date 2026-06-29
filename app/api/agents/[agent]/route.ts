@@ -1,4 +1,4 @@
-// Meridian agent stack — DEFAULT TRIGGER (on-demand / webhook).
+// Adunda agent stack — DEFAULT TRIGGER (on-demand / webhook).
 //
 // POST /api/agents/lead_response
 //   body: { "userId": "...", "secret": "...", "payload": { ...event fields... } }

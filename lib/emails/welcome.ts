@@ -5,7 +5,7 @@ const resend = new Resend(process.env.RESEND_API_KEY);
 export async function sendWelcomeEmail(email: string, name: string) {
   try {
     await resend.emails.send({
-      from: "Andrew at RepWise <andrew@tryrepwise.com>",
+      from: "Andrew at Adunda <andrew@tryrepwise.com>",
       to: email,
       subject: "You just made my day — your first upload is ready",
       html: `
@@ -16,7 +16,7 @@ export async function sendWelcomeEmail(email: string, name: string) {
   <div style="max-width:560px;margin:0 auto;padding:40px 20px;">
 
     <div style="margin-bottom:24px;">
-      <span style="font-size:20px;font-weight:700;color:#ffffff;">Try<span style="color:#3b82f6;">RepWise</span></span>
+      <span style="font-size:20px;font-weight:700;color:#ffffff;">Try<span style="color:#3b82f6;">Adunda</span></span>
     </div>
 
     <div style="background:#111111;border:1px solid #222222;border-radius:16px;padding:32px;margin-bottom:20px;">
@@ -24,7 +24,7 @@ export async function sendWelcomeEmail(email: string, name: string) {
         Hey ${name || "there"},
       </p>
       <p style="color:#9ca3af;font-size:15px;line-height:1.7;margin:0 0 16px 0;">
-        Seriously — thank you for signing up. I built RepWise by myself after years in field sales with no way to actually see what was working in my own data. Knowing that someone is trying it means a lot.
+        Seriously — thank you for signing up. I built Adunda by myself after years in field sales with no way to actually see what was working in my own data. Knowing that someone is trying it means a lot.
       </p>
       <p style="color:#9ca3af;font-size:15px;line-height:1.7;margin:0 0 16px 0;">
         Here is what to do right now — go to the Upload page and drop in a CSV of your sales activity. Any format works. Messy data is fine. In about 2 minutes you will have your first batch of insights on your dashboard.
@@ -40,7 +40,7 @@ export async function sendWelcomeEmail(email: string, name: string) {
       <p style="color:#6b7280;font-size:13px;line-height:1.6;margin:0;">
         Thank you again. Really.<br><br>
         — Andrew<br>
-        <span style="color:#4b5563;">Founder, RepWise</span><br>
+        <span style="color:#4b5563;">Founder, Adunda</span><br>
         <a href="mailto:andrew@tryrepwise.com" style="color:#3b82f6;text-decoration:none;">andrew@tryrepwise.com</a>
       </p>
     </div>

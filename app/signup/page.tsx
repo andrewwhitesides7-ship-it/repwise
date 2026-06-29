@@ -135,7 +135,7 @@ export default function SignupPage() {
       <div className="hidden lg:flex lg:w-1/2 flex-col justify-between p-12 relative">
         <div className="relative z-10">
           <Link href="/" className="text-2xl font-black text-white">
-            Try<span className="text-blue-400">RepWise</span>
+            Try<span className="text-blue-400">Adunda</span>
           </Link>
         </div>
 
@@ -212,7 +212,7 @@ export default function SignupPage() {
             </p>
             <div>
               <p className="text-white text-sm font-bold">Andrew Whitesides</p>
-              <p className="text-gray-600 text-xs">Founder, RepWise</p>
+              <p className="text-gray-600 text-xs">Founder, Adunda</p>
             </div>
           </div>
         </div>
@@ -225,7 +225,7 @@ export default function SignupPage() {
           {/* Mobile logo */}
           <div className="lg:hidden text-center mb-8">
             <Link href="/" className="text-2xl font-black text-white">
-              Try<span className="text-blue-400">RepWise</span>
+              Try<span className="text-blue-400">Adunda</span>
             </Link>
           </div>
 

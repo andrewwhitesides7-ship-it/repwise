@@ -1,4 +1,4 @@
-# Meridian agent stack
+# Adunda agent stack
 
 Modular AI agents for small service businesses. Each agent is a small module that
 takes an event, asks Claude what to do, and logs one row to `agent_activity` — which

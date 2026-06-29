@@ -1,4 +1,4 @@
-// Meridian agent stack — shared types.
+// Adunda agent stack — shared types.
 
 export type AgentType =
   | "lead_response"

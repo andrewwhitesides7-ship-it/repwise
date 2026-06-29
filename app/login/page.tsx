@@ -102,7 +102,7 @@ export default function LoginPage() {
             <span className="inline-grid place-items-center w-7 h-7 rounded-lg" style={{ background: "linear-gradient(135deg,var(--accent),var(--accent2))" }}>
               <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 1v12M3 4.5v5M11 4.5v5" stroke="#fff" strokeWidth="1.6" strokeLinecap="round" /></svg>
             </span>
-            Meridian
+            Adunda
           </Link>
 
           <div>
@@ -113,7 +113,7 @@ export default function LoginPage() {
               See exactly where your<br />business is losing money.
             </h2>
             <p className="text-[var(--muted)] text-base leading-relaxed mb-8 max-w-md">
-              Upload your data. Meridian finds the revenue leaking through your funnel — slow lead response, cold quotes, unpaid invoices — and deploys agents to recover it.
+              Upload your data. Adunda finds the revenue leaking through your funnel — slow lead response, cold quotes, unpaid invoices — and deploys agents to recover it.
             </p>
 
             <div className="space-y-3">
@@ -156,7 +156,7 @@ export default function LoginPage() {
               <span className="inline-grid place-items-center w-7 h-7 rounded-lg" style={{ background: "linear-gradient(135deg,var(--accent),var(--accent2))" }}>
                 <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 1v12M3 4.5v5M11 4.5v5" stroke="#fff" strokeWidth="1.6" strokeLinecap="round" /></svg>
               </span>
-              Meridian
+              Adunda
             </Link>
           </div>
 
@@ -164,7 +164,7 @@ export default function LoginPage() {
             <div className="glass rounded-[28px] p-8">
               <div className="mb-7">
                 <h1 className="text-2xl font-semibold tracking-tight mb-1.5">Welcome back</h1>
-                <p className="text-[var(--muted)] text-sm">Sign in to your Meridian account.</p>
+                <p className="text-[var(--muted)] text-sm">Sign in to your Adunda account.</p>
               </div>
 
               <button onClick={handleGoogle} disabled={googleLoading} className="btn-ghost mb-5">

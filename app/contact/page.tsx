@@ -20,7 +20,7 @@ export default function ContactPage() {
     <div className="min-h-screen bg-gray-950 text-white">
       <div className="max-w-4xl mx-auto px-6 py-16">
         <Link href="/" className="text-xl font-bold text-white block mb-10">
-          Try<span className="text-blue-500">RepWise</span>
+          Try<span className="text-blue-500">Adunda</span>
         </Link>
 
         <div className="grid md:grid-cols-2 gap-16">

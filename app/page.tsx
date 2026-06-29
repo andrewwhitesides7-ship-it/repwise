@@ -4,7 +4,7 @@ import React, { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 
 /* ------------------------------------------------------------------ *
- * Meridian — landing page  (app/page.tsx)
+ * Adunda — landing page  (app/page.tsx)
  * Style: futuristic Apple. Light grey field, liquid-glass panels,
  * SF Pro type, one cool gradient accent. Signature element: a glowing
  * "meridian" line that draws down the page as you scroll, connecting
@@ -13,7 +13,7 @@ import Link from "next/link";
  * ------------------------------------------------------------------ */
 
 /* ----------------------------- CONFIG — replace these two values ---- */
-const BRAND = "Meridian";
+const BRAND = "Adunda";
 const CALENDLY_URL = "https://calendly.com/your-handle/meridian-demo"; // ← your real Calendly link
 const CONTACT_EMAIL = "hello@trymeridian.com"; // ← your real inbox
 /* ------------------------------------------------------------------- */
@@ -26,7 +26,7 @@ const STEPS: Step[] = [
     n: "01",
     eyebrow: "Connect",
     title: "Bring your business data",
-    body: "Leads, jobs, calls, quotes, invoices, schedules — exported however you have it. Messy spreadsheets are fine. Meridian reads it, no cleanup from you.",
+    body: "Leads, jobs, calls, quotes, invoices, schedules — exported however you have it. Messy spreadsheets are fine. Adunda reads it, no cleanup from you.",
   },
   {
     k: "diagnose",
@@ -60,7 +60,7 @@ const FINDINGS = [
   {
     tag: "System gap",
     title: "Quotes go out and go quiet",
-    body: "No second touch, no third. Won work slips to whoever followed up first. Meridian runs the cadence automatically until they book or decline.",
+    body: "No second touch, no third. Won work slips to whoever followed up first. Adunda runs the cadence automatically until they book or decline.",
   },
   {
     tag: "Hidden capacity",

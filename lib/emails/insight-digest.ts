@@ -28,9 +28,9 @@ export async function sendInsightDigest(email: string, name: string, insights: I
 
   try {
     await resend.emails.send({
-      from: "Andrew at RepWise <andrew@tryrepwise.com>",
+      from: "Andrew at Adunda <andrew@tryrepwise.com>",
       to: email,
-      subject: "Your top insights for today — RepWise",
+      subject: "Your top insights for today — Adunda",
       html: `
 <!DOCTYPE html>
 <html>
@@ -39,7 +39,7 @@ export async function sendInsightDigest(email: string, name: string, insights: I
   <div style="max-width:560px;margin:0 auto;padding:40px 20px;">
 
     <div style="margin-bottom:24px;">
-      <span style="font-size:20px;font-weight:700;color:#ffffff;">Try<span style="color:#3b82f6;">RepWise</span></span>
+      <span style="font-size:20px;font-weight:700;color:#ffffff;">Try<span style="color:#3b82f6;">Adunda</span></span>
     </div>
 
     <div style="background:#111111;border:1px solid #222222;border-radius:16px;padding:32px;margin-bottom:20px;">
@@ -69,7 +69,7 @@ export async function sendInsightDigest(email: string, name: string, insights: I
       <p style="color:#6b7280;font-size:13px;line-height:1.6;margin:24px 0 0 0;">
         If anything looks off or you want a feature added — just reply to this email.<br><br>
         — Andrew<br>
-        <span style="color:#4b5563;">Founder, RepWise</span>
+        <span style="color:#4b5563;">Founder, Adunda</span>
       </p>
     </div>
 

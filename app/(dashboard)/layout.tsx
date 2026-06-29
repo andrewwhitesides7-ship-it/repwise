@@ -18,7 +18,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         <div className="flex md:flex-col gap-6 w-full items-center md:items-start">
           <div className="px-3 py-2">
             <span className="font-bold tracking-tight text-lg bg-gradient-to-r from-[#0a84ff] to-[#6a5cff] bg-clip-text text-transparent">
-              MERIDIAN
+              ADUNDA
             </span>
             <span className="text-[9px] block font-mono text-[#6e6e73] tracking-widest uppercase"> Leak Detection</span>
           </div>

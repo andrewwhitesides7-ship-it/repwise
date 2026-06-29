@@ -44,7 +44,7 @@ export async function generateAIGoals() {
   const message = await anthropic.messages.create({
     model: "claude-sonnet-4-5",
     max_tokens: 2000,
-    system: `You are RepWise, an AI sales coach. Based on sales data and insights, generate 5-6 specific, measurable, achievable goals for this sales team. Return ONLY a JSON array. Each goal object has: title (short, action-oriented, under 8 words), description (1 sentence explaining why this goal matters based on their data), target_value (a number), unit (e.g. "%" or "closes/week" or "doors/day" or "$"), ai_reasoning (1-2 sentences explaining what in their data led to this recommendation), checklist_items (array of 3-4 specific action strings the rep should do to achieve this goal). No preamble, no markdown, just the raw JSON array.`,
+    system: `You are Adunda, an AI sales coach. Based on sales data and insights, generate 5-6 specific, measurable, achievable goals for this sales team. Return ONLY a JSON array. Each goal object has: title (short, action-oriented, under 8 words), description (1 sentence explaining why this goal matters based on their data), target_value (a number), unit (e.g. "%" or "closes/week" or "doors/day" or "$"), ai_reasoning (1-2 sentences explaining what in their data led to this recommendation), checklist_items (array of 3-4 specific action strings the rep should do to achieve this goal). No preamble, no markdown, just the raw JSON array.`,
     messages: [{
       role: "user",
       content: `Generate goals based on this data:\n\nOVERALL METRICS:\nTotal knocks: ${totalKnocked}\nTotal closes: ${totalClosed}\nClose rate: ${closeRate}%\nAvg deal value: $${avgDeal}\n\nREP BREAKDOWN:\n${repSummary}\n\nLATEST INSIGHTS:\n${insightSummary}`,

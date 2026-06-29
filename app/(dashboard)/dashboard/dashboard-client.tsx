@@ -6,7 +6,7 @@ import { dismissInsight } from "@/app/actions/insights";
 import { getAgents, listActivity, setAgentStatus, resolveActivity, triggerAgent } from "@/app/actions/agents";
 
 /* ------------------------------------------------------------------ *
- * Meridian — dashboard  (app/(dashboard)/dashboard/dashboard-client.tsx)
+ * Adunda — dashboard  (app/(dashboard)/dashboard/dashboard-client.tsx)
  * Apple liquid-glass. Three tabs:
  *   • Insights     — the diagnostic (REAL data from the insights table)
  *   • Activity     — what the agent is doing + pause/approve
@@ -407,7 +407,7 @@ export default function DashboardClient({ insights, userName, userEmail, activit
                               <div className="mt-3 space-y-3">
                                 <p className="text-sm leading-relaxed text-[var(--muted)]">{ins.body}</p>
                                 <div className="rounded-2xl px-4 py-3" style={{ background: "rgba(10,132,255,0.07)", border: "1px solid rgba(10,132,255,0.16)" }}>
-                                  <p className="text-[11px] font-semibold tracking-wide grad-text">MERIDIAN CAN AUTOMATE THIS</p>
+                                  <p className="text-[11px] font-semibold tracking-wide grad-text">ADUNDA CAN AUTOMATE THIS</p>
                                   <p className="mt-1 text-sm text-[var(--ink)]/80">Deploy an agent to close this gap automatically — talk to us on your next check-in.</p>
                                 </div>
                               </div>
@@ -447,7 +447,7 @@ export default function DashboardClient({ insights, userName, userEmail, activit
               </div>
               <div className="rounded-2xl px-4 py-4" style={{ background: "rgba(0,0,0,0.025)", border: "1px solid rgba(0,0,0,0.05)" }}>
                 <div className="flex items-center gap-2 mb-3 min-w-0">
-                  <span className="md-mono text-[11px] text-[var(--muted)] shrink-0">{latest ? (AGENT_LABEL[latest.agent_type] ?? latest.agent_type) : "Meridian"}</span>
+                  <span className="md-mono text-[11px] text-[var(--muted)] shrink-0">{latest ? (AGENT_LABEL[latest.agent_type] ?? latest.agent_type) : "Adunda"}</span>
                   <span className="md-mono text-[11px] text-[var(--muted)] shrink-0">›</span>
                   <span className={`text-sm font-medium truncate ${working ? "cursor" : ""}`}>{latest ? latest.action : "Waiting for the next action…"}</span>
                 </div>

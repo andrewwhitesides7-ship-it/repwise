@@ -1,4 +1,4 @@
-// Meridian agent stack — the runner. Trigger-agnostic: call runAgent() from an
+// Adunda agent stack — the runner. Trigger-agnostic: call runAgent() from an
 // API route, a cron sweep, a queue worker, or a server action. It asks Claude what
 // to do, drafts the real customer-facing message, ACTS on it (sends via Resend) or
 // holds it for owner approval, and writes one agent_activity row.

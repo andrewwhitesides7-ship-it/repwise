@@ -1,6 +1,6 @@
 "use server";
 
-// Meridian agent stack — server actions used by the dashboard.
+// Adunda agent stack — server actions used by the dashboard.
 
 import { createClient } from "@/lib/supabase/server";
 import { runAgent } from "@/lib/agents/runner";

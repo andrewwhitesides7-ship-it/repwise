@@ -67,7 +67,7 @@ export default function AdminClient() {
             <h1 className="text-2xl font-bold text-white">Admin Dashboard</h1>
             <span className="text-xs bg-red-500/10 text-red-400 border border-red-500/20 px-2 py-0.5 rounded-full">Private</span>
           </div>
-          <p className="text-gray-400 text-sm">RepWise business metrics — only visible to you.</p>
+          <p className="text-gray-400 text-sm">Adunda business metrics — only visible to you.</p>
         </div>
         <Link href="/admin/social" className="flex items-center gap-2 bg-blue-600 hover:bg-blue-500 text-white font-semibold px-4 py-2.5 rounded-xl text-sm transition shadow-lg shadow-blue-500/20">
           🤖 Social Posting

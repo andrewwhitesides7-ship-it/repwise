@@ -173,7 +173,7 @@ function UploadPageInner() {
         {/* Header */}
         <div className="mb-7">
           <h1 className="text-2xl md:text-[28px] font-semibold tracking-tight mb-1">Upload your business data</h1>
-          <p className="text-[var(--muted)] text-sm">Drop a CSV or connect your CRM and Meridian will find where revenue is leaking.</p>
+          <p className="text-[var(--muted)] text-sm">Drop a CSV or connect your CRM and Adunda will find where revenue is leaking.</p>
         </div>
 
         <div className="grid md:grid-cols-5 gap-5">
@@ -277,7 +277,7 @@ function UploadPageInner() {
           <div className="md:col-span-2 space-y-4">
             <div className="glass rounded-[24px] p-5">
               <h3 className="font-semibold text-sm tracking-tight mb-1">Columns that unlock the most</h3>
-              <p className="text-[var(--muted)] text-xs mb-3">Meridian reads any export — these three light up the funnel.</p>
+              <p className="text-[var(--muted)] text-xs mb-3">Adunda reads any export — these three light up the funnel.</p>
               <div className="space-y-2">
                 {[
                   { col: "status", desc: "Stage (new, quoted, won)", required: true },

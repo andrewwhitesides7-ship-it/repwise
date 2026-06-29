@@ -5,7 +5,7 @@ export default function PrivacyPage() {
     <div className="min-h-screen bg-gray-950 text-white">
       <div className="max-w-3xl mx-auto px-6 py-16">
         <Link href="/" className="text-xl font-bold text-white block mb-10">
-          Try<span className="text-blue-500">RepWise</span>
+          Try<span className="text-blue-500">Adunda</span>
         </Link>
 
         <div className="mb-10">
@@ -31,7 +31,7 @@ Payment information: processed securely by Stripe. We never store your full card
               title: "2. How We Use Your Information",
               body: `We use the information we collect to:
 
-- Provide, operate, and improve RepWise
+- Provide, operate, and improve Adunda
 - Generate AI-powered sales insights from your uploaded data
 - Process payments and manage subscriptions
 - Send product updates and support communications
@@ -53,7 +53,7 @@ Service providers: We use third-party services including Anthropic (AI analysis)
 
 Legal requirements: We may disclose information if required by law or in response to valid legal process.
 
-Business transfers: If RepWise is acquired or merged, your information may be transferred as part of that transaction.
+Business transfers: If Adunda is acquired or merged, your information may be transferred as part of that transaction.
 
 We never share your sales data with advertisers or data brokers.`,
             },
@@ -81,11 +81,11 @@ To exercise any of these rights, contact us at support@tryrepwise.com.`,
             },
             {
               title: "8. Children's Privacy",
-              body: `RepWise is not intended for use by anyone under the age of 18. We do not knowingly collect personal information from children. If you believe we have collected information from a child, please contact us immediately.`,
+              body: `Adunda is not intended for use by anyone under the age of 18. We do not knowingly collect personal information from children. If you believe we have collected information from a child, please contact us immediately.`,
             },
             {
               title: "9. Changes to This Policy",
-              body: `We may update this privacy policy from time to time. We will notify you of significant changes by email or through the product. Your continued use of RepWise after changes take effect constitutes your acceptance of the updated policy.`,
+              body: `We may update this privacy policy from time to time. We will notify you of significant changes by email or through the product. Your continued use of Adunda after changes take effect constitutes your acceptance of the updated policy.`,
             },
             {
               title: "10. Contact Us",

@@ -460,7 +460,7 @@ export default function GoalsClient({ goals: initialGoals, hasData }: GoalsClien
             <div className="text-4xl mb-3">🎯</div>
             <h3 className="text-white font-bold mb-2">Upload data to get AI-generated goals</h3>
             <p className="text-gray-600 text-sm mb-4">
-              RepWise will analyze your team and create specific actionable goals with step-by-step plans.
+              Adunda will analyze your team and create specific actionable goals with step-by-step plans.
             </p>
             <a
               href="/upload"

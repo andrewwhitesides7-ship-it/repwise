@@ -6,7 +6,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 
 /* ------------------------------------------------------------------ *
- * Meridian — Sidebar Layout Component
+ * Adunda — Sidebar Layout Component
  * Apple liquid-glass theme matching dashboard-client.tsx
  * ------------------------------------------------------------------ */
 
@@ -158,7 +158,7 @@ export default function Sidebar({ email }: { email?: string }) {
               <path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
             </svg>
           </div>
-          <span className="font-semibold tracking-tight text-lg grad-text">Meridian</span>
+          <span className="font-semibold tracking-tight text-lg grad-text">Adunda</span>
         </Link>
       </div>
 
@@ -238,7 +238,7 @@ export default function Sidebar({ email }: { email?: string }) {
               <path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
             </svg>
           </div>
-          <span className="font-semibold text-sm tracking-tight grad-text">Meridian</span>
+          <span className="font-semibold text-sm tracking-tight grad-text">Adunda</span>
         </Link>
 
         <button

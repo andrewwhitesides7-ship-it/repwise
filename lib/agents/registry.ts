@@ -1,4 +1,4 @@
-// Meridian agent stack — registry. Register every agent module here.
+// Adunda agent stack — registry. Register every agent module here.
 import type { AgentModule, AgentType } from "./types";
 import { leadResponse } from "./modules/lead-response";
 import { followUp } from "./modules/follow-up";

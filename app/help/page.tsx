@@ -4,7 +4,7 @@ const faqs = [
   {
     category: "Getting Started",
     items: [
-      { q: "What is RepWise?", a: "RepWise is an AI-powered sales intelligence platform built for field sales and door-to-door teams. Upload your sales activity data and our AI analyzes it to surface 8-10 specific insights about where you are losing deals — in under 2 minutes." },
+      { q: "What is Adunda?", a: "Adunda is an AI-powered sales intelligence platform built for field sales and door-to-door teams. Upload your sales activity data and our AI analyzes it to surface 8-10 specific insights about where you are losing deals — in under 2 minutes." },
       { q: "How do I get started?", a: "Sign up for a free account, go to the Upload page, and drag in a CSV of your sales activity. Within 2 minutes you will have your first batch of AI insights on your dashboard." },
       { q: "What data do I need?", a: "Any CSV with your sales activity works. Ideal columns include rep name, date, time of day, ZIP code, knocked, contacted, pitched, closed, and deal value. We handle any format and work with incomplete data." },
       { q: "Do I need a CRM?", a: "No. Export a CSV from any spreadsheet or CRM and upload directly. We also support direct HubSpot integration with one-click OAuth." },
@@ -14,7 +14,7 @@ const faqs = [
     category: "AI Insights",
     items: [
       { q: "How does the AI analysis work?", a: "We parse your CSV, build a statistical summary of your sales activity, then send it to Claude — Anthropic's AI — which generates 8-10 specific, data-backed insights about where you are losing deals." },
-      { q: "What kind of insights does RepWise generate?", a: "Insights fall into three categories: Critical (fix now), Opportunity (untapped potential), and Pattern (trends worth knowing). Examples include time-of-day performance, rep benchmarking, territory gaps, and missed follow-ups." },
+      { q: "What kind of insights does Adunda generate?", a: "Insights fall into three categories: Critical (fix now), Opportunity (untapped potential), and Pattern (trends worth knowing). Examples include time-of-day performance, rep benchmarking, territory gaps, and missed follow-ups." },
       { q: "How often are insights refreshed?", a: "Every time you upload new data or sync your CRM. Old insights are automatically archived so your dashboard always shows the latest analysis." },
       { q: "Can I dismiss insights?", a: "Yes. Click the X on any insight card to dismiss it. Dismissed insights move to your History page." },
     ],
@@ -22,7 +22,7 @@ const faqs = [
   {
     category: "Plans and Billing",
     items: [
-      { q: "What is the free plan?", a: "Free gives you 3 insights and 1 CSV upload per month so you can try RepWise before committing. No credit card required." },
+      { q: "What is the free plan?", a: "Free gives you 3 insights and 1 CSV upload per month so you can try Adunda before committing. No credit card required." },
       { q: "Can I cancel anytime?", a: "Yes. Cancel from your Billing page at any time. No contracts, no cancellation fees. Your account stays active until the end of your billing period." },
       { q: "What is the difference between Essential and Professional?", a: "Essential ($99/month) is for solo reps with unlimited uploads and insights. Professional ($199/month) adds team collaboration for up to 5 people, AI coaching, and 90-day history." },
       { q: "How does Team plan billing work?", a: "Team ($499/month) gives you unlimited seats. One flat price no matter how many reps you add." },
@@ -46,11 +46,11 @@ export default function HelpPage() {
         {/* Header */}
         <div className="mb-12">
           <Link href="/" className="text-xl font-bold text-white block mb-10">
-            Try<span className="text-blue-500">RepWise</span>
+            Try<span className="text-blue-500">Adunda</span>
           </Link>
           <div className="inline-flex items-center gap-2 bg-blue-500/10 border border-blue-500/20 text-blue-400 text-xs font-medium px-3 py-1.5 rounded-full mb-4">Help Center</div>
           <h1 className="text-4xl font-bold mb-4">How can we help?</h1>
-          <p className="text-gray-400 text-lg">Everything you need to know about RepWise.</p>
+          <p className="text-gray-400 text-lg">Everything you need to know about Adunda.</p>
         </div>
 
         {/* Quick links */}

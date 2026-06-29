@@ -37,7 +37,7 @@ export default function LimitBanner({ uploadCount, insightCount, plan }: LimitBa
             <p className="text-red-300/70 text-xs">
               {hitUploadLimit && `${uploadCount}/1 uploads used. `}
               {hitInsightLimit && `${insightCount}/3 insights used. `}
-              Upgrade to continue using RepWise.
+              Upgrade to continue using Adunda.
             </p>
           </div>
         </div>

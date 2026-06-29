@@ -33,7 +33,7 @@ export async function generateSocialPosts() {
   const message = await anthropic.messages.create({
     model: "claude-sonnet-4-5",
     max_tokens: 4000,
-    system: `You are Andrew, a 20-something founder who just built RepWise after watching his dad's field sales team struggle with no data insights. You are posting in online communities to get your first users. Write like a real person — casual, excited, a little vulnerable, founder energy. Not a marketer. Not corporate. Real.
+    system: `You are Andrew, a 20-something founder who just built Adunda after watching his dad's field sales team struggle with no data insights. You are posting in online communities to get your first users. Write like a real person — casual, excited, a little vulnerable, founder energy. Not a marketer. Not corporate. Real.
 
 Your voice:
 - Casual language, contractions, occasional imperfection
@@ -44,7 +44,7 @@ Your voice:
 - Sometimes ask questions to spark conversation
 - Sound like you posted this at midnight because you are hyped
 
-RepWise in one line: you upload your sales CSV and AI tells you exactly where you are losing deals — which hours close best, which reps are burning doors, which ZIPs convert. Free to try at tryrepwise.com.
+Adunda in one line: you upload your sales CSV and AI tells you exactly where you are losing deals — which hours close best, which reps are burning doors, which ZIPs convert. Free to try at tryrepwise.com.
 
 Return ONLY a JSON array. No preamble, no markdown, just raw JSON. Each post object: { platform: "reddit"|"facebook"|"slack", community: string, title: string or null (reddit only), body: string, angle: string }`,
 
@@ -57,10 +57,10 @@ FACEBOOK (2 posts): ${communities.facebook.map(c => c.name).join(", ")}
 SLACK (2 posts): ${communities.slack.map(c => c.name).join(", ")}
 
 Mix these angles across the posts:
-1. Founder origin story — why you built RepWise (watching field sales reps have tons of data but zero insights)
+1. Founder origin story — why you built Adunda (watching field sales reps have tons of data but zero insights)
 2. Soft launch energy — "just launched this, would love feedback from anyone in field sales"
 3. Sharing a specific insight the AI surfaced (e.g. "found out 3pm closes 3x better than morning")
-4. Asking the community a genuine question that leads to RepWise naturally
+4. Asking the community a genuine question that leads to Adunda naturally
 5. Transparent startup founder sharing what they learned building for this market
 6. "Try it free" post with a specific value prop for that community
 
@@ -121,18 +121,18 @@ export async function generateOutreachMessages(influencerName: string, platform:
   const message = await anthropic.messages.create({
     model: "claude-sonnet-4-5",
     max_tokens: 2000,
-    system: `You are Andrew, founder of RepWise. Write authentic cold outreach DMs to D2D and field sales influencers proposing an affiliate partnership. Sound like a real founder — excited, direct, not corporate. Offer 40% commission. Return ONLY a JSON array of 3 message variants. Each: { platform: string, subject: string or null, body: string, tone: string }`,
+    system: `You are Andrew, founder of Adunda. Write authentic cold outreach DMs to D2D and field sales influencers proposing an affiliate partnership. Sound like a real founder — excited, direct, not corporate. Offer 40% commission. Return ONLY a JSON array of 3 message variants. Each: { platform: string, subject: string or null, body: string, tone: string }`,
     messages: [{
       role: "user",
       content: `Write 3 outreach message variants to ${influencerName}, a ${niche} influencer with ${followerCount} followers on ${platform}.
 
-RepWise: AI tool that analyzes field sales CSV data and gives 8-10 insights in 2 minutes. Tells reps which hours close best, which ZIPs convert, which reps are burning doors. Free at tryrepwise.com.
+Adunda: AI tool that analyzes field sales CSV data and gives 8-10 insights in 2 minutes. Tells reps which hours close best, which ZIPs convert, which reps are burning doors. Free at tryrepwise.com.
 
 Affiliate offer: 40% recurring commission. So if they send us someone on the $99 plan they earn $39.60/month forever as long as that person stays subscribed.
 
 Write 3 variants:
 1. Short and punchy - 3 sentences max
-2. Value-first - lead with what RepWise does for their audience  
+2. Value-first - lead with what Adunda does for their audience  
 3. Numbers-focused - lead with the commission opportunity
 
 Make them sound like a real founder DM not a template.`,

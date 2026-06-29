@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import localFont from "next/font/local";
-import "./globals.css";
+// Change from: import "./globals.css";
+// Change to:
+import "@/app/globals.css";
 
 const geistSans = localFont({
   src: "./fonts/GeistVF.woff",
@@ -15,8 +17,8 @@ const geistMono = localFont({
 });
 
 export const metadata: Metadata = {
-  title: "TryRepWise — AI Sales Intelligence for Field Sales Teams",
-  description: "RepWise analyzes your field sales data and surfaces exactly where you are losing deals. Upload a CSV and get 8-10 actionable insights in under 2 minutes.",
+  title: "Adunda — AI Sales Intelligence for Field Sales Teams",
+  description: "Adunda analyzes your field sales data and surfaces exactly where you are losing deals. Upload a CSV and get 8-10 actionable insights in under 2 minutes.",
 };
 
 export default function RootLayout({

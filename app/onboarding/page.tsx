@@ -119,7 +119,7 @@ export default function OnboardingPage() {
     <div className="min-h-screen bg-gray-950 flex flex-col items-center justify-center px-6 py-12">
       <div className="mb-8">
         <span className="text-2xl font-bold text-white">
-          Try<span className="text-blue-500">RepWise</span>
+          Try<span className="text-blue-500">Adunda</span>
         </span>
       </div>
 
@@ -162,7 +162,7 @@ export default function OnboardingPage() {
           <div>
             <div className="text-center mb-8">
               <div className="text-4xl mb-3">👋</div>
-              <h1 className="text-2xl font-bold text-white mb-2">How do you use RepWise?</h1>
+              <h1 className="text-2xl font-bold text-white mb-2">How do you use Adunda?</h1>
               <p className="text-gray-400 text-sm">We will personalize your experience based on your role.</p>
             </div>
             <div className="grid grid-cols-2 gap-4 mb-8">
