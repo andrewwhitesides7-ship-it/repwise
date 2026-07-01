@@ -262,18 +262,8 @@ export async function analyzeUpload(uploadId: string, fileContent: string) {
     .eq("id", user.id)
     .single();
 
-  if (profile?.plan === "free") {
-    const { count: uploadCount } = await supabase
-      .from("uploads")
-      .select("*", { count: "exact", head: true })
-      .eq("user_id", user.id)
-      .eq("status", "complete");
-
-    if ((uploadCount || 0) >= 1) {
-      await supabase.from("uploads").update({ status: "failed", error_message: "Free limit reached" }).eq("id", uploadId);
-      redirect("/billing?limit=uploads");
-    }
-  }
+  // NOTE: free-tier upload cap removed intentionally while validating.
+  // TODO: re-add a usage limit once there are paying customers.
 
   await supabase.from("uploads").update({ status: "processing" }).eq("id", uploadId);
 
@@ -332,6 +322,8 @@ export async function analyzeUpload(uploadId: string, fileContent: string) {
       pest: "Pest control: recurring plans vs one-offs, seasonal demand, missed renewals, and quotes that go cold.",
       roofing: "Roofing: insurance/storm jobs, high-ticket estimates that sit unaccepted, and slow follow-up on bids.",
       hvac: "HVAC: maintenance plans, emergency vs scheduled work, install quotes left open, and overdue invoices.",
+      plumbing: "Plumbing: emergency vs scheduled work, estimates left open, service-plan renewals, and overdue invoices.",
+      electrical: "Electrical: project bids that stall, service-call follow-up, and unpaid invoices on completed work.",
       landscaping: "Landscaping/lawn: recurring service retention, seasonal re-activation, and unconverted estimates.",
       cleaning: "Commercial/residential cleaning: recurring contracts, churned accounts, and quote-to-booking gaps.",
       security: "Home security: monitoring contracts, install scheduling, and abandoned quotes.",
@@ -419,7 +411,7 @@ If you cannot produce valid JSON, return [].
 Return ONLY the JSON array.`;
 
     const message = await anthropic.messages.create({
-      model: "claude-sonnet-4-5",
+      model: "claude-sonnet-4-6",
       max_tokens: 4000,
       system: perfectPrompt,
       messages: [{
