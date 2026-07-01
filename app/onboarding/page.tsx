@@ -4,44 +4,44 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 
-type Step = 1 | 2 | 3 | 4;
-type Role = "rep" | "manager";
+type Step = 1 | 2 | 3;
 
+// Vertical IDs align 1:1 with verticalContext keys in app/actions/analyze.ts
 const businessTypes = [
-  { id: "solar", label: "Solar", icon: "☀️", desc: "Residential or commercial solar sales" },
-  { id: "pest", label: "Pest Control", icon: "🐛", desc: "Door-to-door pest control services" },
-  { id: "security", label: "Home Security", icon: "🔒", desc: "Security systems and monitoring" },
-  { id: "telecom", label: "Telecom", icon: "📡", desc: "Internet, TV, and phone services" },
-  { id: "roofing", label: "Roofing", icon: "🏠", desc: "Roofing and home improvement" },
-  { id: "insurance", label: "Insurance", icon: "🛡️", desc: "Life, home, or auto insurance" },
-  { id: "saas", label: "SaaS / Tech", icon: "💻", desc: "Software and technology sales" },
-  { id: "other", label: "Other", icon: "📦", desc: "Something else entirely" },
+  { id: "hvac", label: "HVAC", icon: "🌡️" },
+  { id: "plumbing", label: "Plumbing", icon: "🔧" },
+  { id: "roofing", label: "Roofing", icon: "🏠" },
+  { id: "electrical", label: "Electrical", icon: "⚡" },
+  { id: "pest", label: "Pest Control", icon: "🐛" },
+  { id: "landscaping", label: "Landscaping", icon: "🌿" },
+  { id: "cleaning", label: "Cleaning", icon: "🧽" },
+  { id: "solar", label: "Solar", icon: "☀️" },
+  { id: "other", label: "Other service biz", icon: "📦" },
 ];
 
 const teamSizes = [
-  { id: "solo", label: "Just me", icon: "👤", desc: "Solo rep" },
-  { id: "small", label: "2-5 reps", icon: "👥", desc: "Small team" },
-  { id: "medium", label: "6-20 reps", icon: "🏢", desc: "Growing team" },
-  { id: "large", label: "20+ reps", icon: "🏭", desc: "Large operation" },
+  { id: "solo", label: "Just me", desc: "Owner-operator" },
+  { id: "small", label: "2–5", desc: "Small crew" },
+  { id: "medium", label: "6–15", desc: "Growing" },
+  { id: "large", label: "16+", desc: "Established" },
 ];
 
+// Challenge IDs map to the agent that plugs that leak
 const challenges = [
-  { id: "close_rate", label: "Low close rate", icon: "📉", desc: "Not converting enough contacts" },
-  { id: "follow_ups", label: "Missed follow-ups", icon: "📞", desc: "Leads going cold" },
-  { id: "territory", label: "Territory optimization", icon: "🗺️", desc: "Not knowing where to focus" },
-  { id: "rep_performance", label: "Rep performance gaps", icon: "👥", desc: "Inconsistent performance" },
-  { id: "data_visibility", label: "No data visibility", icon: "👁️", desc: "Flying blind without metrics" },
-  { id: "time_of_day", label: "Wrong timing", icon: "⏰", desc: "Knocking at the wrong hours" },
+  { id: "slow_response", label: "Leads I don't get back to fast enough", icon: "⚡", agent: "Lead Response" },
+  { id: "cold_quotes", label: "Quotes that go out and go quiet", icon: "📄", agent: "Follow-Up & Reactivation" },
+  { id: "no_shows", label: "No-shows & cancellations", icon: "📅", agent: "Scheduling & Dispatch" },
+  { id: "unpaid", label: "Unpaid or overdue invoices", icon: "💸", agent: "Quote & Invoice" },
+  { id: "no_reviews", label: "No reviews or repeat business", icon: "⭐", agent: "Reviews & Reputation" },
+  { id: "not_sure", label: "Not sure — find it for me", icon: "🔍", agent: "Diagnostic" },
 ];
 
 export default function OnboardingPage() {
   const router = useRouter();
   const [step, setStep] = useState<Step>(1);
-  const [role, setRole] = useState<Role | null>(null);
   const [businessType, setBusinessType] = useState<string | null>(null);
   const [teamSize, setTeamSize] = useState<string | null>(null);
   const [mainChallenge, setMainChallenge] = useState<string | null>(null);
-  const [teamName, setTeamName] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -59,7 +59,9 @@ export default function OnboardingPage() {
       const { error: updateError } = await supabase
         .from("users")
         .update({
-          role: role || "rep",
+          // role kept as a known-valid value to avoid the legacy DB check constraint.
+          // If you widen the column to allow "owner", switch this.
+          role: "rep",
           business_type: businessType,
           team_size: teamSize,
           main_challenge: mainChallenge,
@@ -74,33 +76,10 @@ export default function OnboardingPage() {
         return;
       }
 
-      await supabase.auth.updateUser({
-        data: { onboarded: true },
-      });
+      await supabase.auth.updateUser({ data: { onboarded: true } });
 
-      if (role === "manager" && teamName.trim()) {
-        const { data: existingTeam } = await supabase
-          .from("teams")
-          .select("id")
-          .eq("owner_id", user.id)
-          .single();
-
-        if (!existingTeam) {
-          const { data: team } = await supabase
-            .from("teams")
-            .insert({ name: teamName.trim(), owner_id: user.id })
-            .select()
-            .single();
-          if (team) {
-            await supabase
-              .from("users")
-              .update({ team_id: team.id })
-              .eq("id", user.id);
-          }
-        }
-      }
-
-      router.push("/dashboard");
+      // Route new owners straight into the upload flow — that's the first value moment.
+      router.push("/upload");
     } catch (err) {
       console.error("Onboarding error:", err);
       setError("Something went wrong. Please try again.");
@@ -109,324 +88,195 @@ export default function OnboardingPage() {
   }
 
   const steps = [
-    { number: 1, label: "Your role" },
-    { number: 2, label: "Your business" },
-    { number: 3, label: "Your challenge" },
-    { number: 4, label: "Get started" },
+    { number: 1, label: "Your work" },
+    { number: 2, label: "Your size" },
+    { number: 3, label: "The leak" },
   ];
 
+  const canContinue = (step === 1 && businessType) || (step === 2 && teamSize) || (step === 3 && mainChallenge);
+
   return (
-    <div className="min-h-screen bg-gray-950 flex flex-col items-center justify-center px-6 py-12">
-      <div className="mb-8">
-        <span className="text-2xl font-bold text-white">
-          Try<span className="text-blue-500">Adunda</span>
-        </span>
+    <div className="md-root relative min-h-screen text-[var(--ink)] antialiased flex flex-col items-center justify-center px-5 py-12">
+      <link rel="preconnect" href="https://fonts.googleapis.com" />
+      <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+
+      <style jsx global>{`
+        :root { --ink:#1d1d1f; --muted:#6e6e73; --field:#f5f5f7; --accent:#0a84ff; --accent2:#6a5cff; }
+        .md-root { font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","SF Pro Text","Inter",system-ui,sans-serif; letter-spacing:-0.01em; }
+        .grad-text { background:linear-gradient(120deg,var(--accent),var(--accent2)); -webkit-background-clip:text; background-clip:text; color:transparent; }
+        .glass { position:relative; background:linear-gradient(135deg,rgba(255,255,255,0.72),rgba(255,255,255,0.42)); backdrop-filter:blur(22px) saturate(180%); -webkit-backdrop-filter:blur(22px) saturate(180%); border:1px solid rgba(255,255,255,0.7); box-shadow:0 10px 40px rgba(20,24,40,0.08), inset 0 1px 0 rgba(255,255,255,0.9); }
+        .btn-primary { display:inline-flex; align-items:center; justify-content:center; gap:.5rem; font-size:.9rem; font-weight:600; color:#fff; padding:.85rem 1.1rem; border-radius:14px; width:100%; background:linear-gradient(120deg,var(--accent),var(--accent2)); box-shadow:0 8px 24px rgba(10,132,255,.32), inset 0 1px 0 rgba(255,255,255,.4); transition:transform .2s ease, filter .2s ease; }
+        .btn-primary:hover { transform:translateY(-1px); filter:brightness(1.05); }
+        .btn-primary:disabled { opacity:.4; transform:none; filter:none; cursor:not-allowed; }
+        .btn-ghost { display:inline-flex; align-items:center; justify-content:center; font-size:.9rem; font-weight:600; color:var(--ink); padding:.85rem 1.1rem; border-radius:14px; background:rgba(255,255,255,0.7); border:1px solid rgba(0,0,0,0.08); transition:background .2s ease; }
+        .btn-ghost:hover { background:rgba(255,255,255,0.95); }
+        @keyframes mdrift { 0%,100%{transform:translate(0,0) scale(1)} 50%{transform:translate(28px,-36px) scale(1.07)} }
+        @media (prefers-reduced-motion: no-preference){ .md-blob{animation:mdrift 22s ease-in-out infinite} }
+        *:focus-visible { outline:2px solid var(--accent); outline-offset:3px; border-radius:6px; }
+      `}</style>
+
+      {/* Ambient background */}
+      <div aria-hidden className="fixed inset-0 z-0 overflow-hidden" style={{ background: "var(--field)" }}>
+        <div className="md-blob absolute -top-32 -left-24 w-[560px] h-[560px] rounded-full" style={{ background: "#bcd4ff", opacity: 0.4, filter: "blur(130px)" }} />
+        <div className="md-blob absolute top-40 -right-32 w-[520px] h-[520px] rounded-full" style={{ background: "#e2d4ff", opacity: 0.38, filter: "blur(130px)", animationDelay: "-7s" }} />
+        <div className="md-blob absolute bottom-0 left-1/3 w-[480px] h-[480px] rounded-full" style={{ background: "#cdeede", opacity: 0.32, filter: "blur(140px)", animationDelay: "-13s" }} />
       </div>
 
-      <div className="flex items-center gap-2 mb-10">
-        {steps.map((s, i) => (
-          <div key={s.number} className="flex items-center gap-2">
-            <div className="flex items-center gap-2">
-              <div
-                className={
-                  "w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-all duration-300 " +
-                  (step > s.number
-                    ? "bg-blue-600 text-white"
-                    : step === s.number
-                    ? "bg-blue-600 text-white ring-4 ring-blue-500/20"
-                    : "bg-gray-800 text-gray-500 border border-gray-700")
-                }
-              >
-                {step > s.number ? (
-                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                  </svg>
-                ) : (
-                  s.number
-                )}
-              </div>
-              <span className={"text-xs font-medium hidden sm:block " + (step === s.number ? "text-white" : "text-gray-600")}>
-                {s.label}
-              </span>
-            </div>
-            {i < steps.length - 1 && (
-              <div className={"w-8 h-px transition-all duration-300 " + (step > s.number ? "bg-blue-600" : "bg-gray-800")} />
-            )}
-          </div>
-        ))}
-      </div>
+      <div className="relative z-10 w-full max-w-2xl">
+        {/* Wordmark */}
+        <div className="text-center mb-7">
+          <span className="text-2xl font-semibold tracking-tight">
+            <span className="grad-text">Adunda</span>
+          </span>
+        </div>
 
-      <div className="w-full max-w-2xl bg-gray-900 border border-gray-800 rounded-3xl p-8 shadow-2xl">
-
-        {step === 1 && (
-          <div>
-            <div className="text-center mb-8">
-              <div className="text-4xl mb-3">👋</div>
-              <h1 className="text-2xl font-bold text-white mb-2">How do you use Adunda?</h1>
-              <p className="text-gray-400 text-sm">We will personalize your experience based on your role.</p>
-            </div>
-            <div className="grid grid-cols-2 gap-4 mb-8">
-              {[
-                {
-                  value: "rep" as Role,
-                  title: "Solo Rep",
-                  desc: "I want insights on my own performance",
-                  icon: "🎯",
-                  features: ["Personal insights", "Close rate tracking", "Territory analysis"],
-                },
-                {
-                  value: "manager" as Role,
-                  title: "Manager",
-                  desc: "I manage a team of reps",
-                  icon: "👔",
-                  features: ["Team insights", "Rep benchmarking", "Manager dashboard"],
-                },
-              ].map((option) => (
-                <button
-                  key={option.value}
-                  onClick={() => setRole(option.value)}
-                  className={
-                    "p-5 rounded-2xl border text-left transition-all duration-200 hover:-translate-y-0.5 " +
-                    (role === option.value
-                      ? "bg-blue-600/10 border-blue-500 shadow-lg shadow-blue-500/10"
-                      : "bg-gray-800/50 border-gray-700 hover:border-gray-600")
+        {/* Progress */}
+        <div className="flex items-center justify-center gap-2 mb-8">
+          {steps.map((s, i) => (
+            <div key={s.number} className="flex items-center gap-2">
+              <div className="flex items-center gap-2">
+                <div
+                  className="w-8 h-8 rounded-full grid place-items-center text-xs font-bold transition-all duration-300"
+                  style={
+                    step > s.number
+                      ? { background: "linear-gradient(120deg,var(--accent),var(--accent2))", color: "#fff" }
+                      : step === s.number
+                      ? { background: "linear-gradient(120deg,var(--accent),var(--accent2))", color: "#fff", boxShadow: "0 0 0 4px rgba(10,132,255,0.15)" }
+                      : { background: "rgba(255,255,255,0.7)", color: "var(--muted)", border: "1px solid rgba(0,0,0,0.08)" }
                   }
                 >
-                  <div className="text-2xl mb-3">{option.icon}</div>
-                  <h3 className="text-white font-bold mb-1 text-sm">{option.title}</h3>
-                  <p className={"text-xs leading-relaxed mb-3 " + (role === option.value ? "text-blue-200/70" : "text-gray-500")}>
-                    {option.desc}
-                  </p>
-                  <ul className="space-y-1">
-                    {option.features.map((f) => (
-                      <li key={f} className="flex items-center gap-1.5 text-xs">
-                        <svg
-                          className={"w-3 h-3 flex-shrink-0 " + (role === option.value ? "text-blue-400" : "text-gray-600")}
-                          fill="none"
-                          viewBox="0 0 24 24"
-                          stroke="currentColor"
-                          strokeWidth={2.5}
-                        >
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                        </svg>
-                        <span className={role === option.value ? "text-blue-200/80" : "text-gray-600"}>{f}</span>
-                      </li>
-                    ))}
-                  </ul>
+                  {step > s.number ? (
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
+                  ) : s.number}
+                </div>
+                <span className="text-xs font-medium hidden sm:block" style={{ color: step === s.number ? "var(--ink)" : "var(--muted)" }}>{s.label}</span>
+              </div>
+              {i < steps.length - 1 && (
+                <div className="w-8 h-px transition-all duration-300" style={{ background: step > s.number ? "var(--accent)" : "rgba(0,0,0,0.12)" }} />
+              )}
+            </div>
+          ))}
+        </div>
+
+        <div className="glass rounded-[24px] p-7">
+          {/* STEP 1 — vertical */}
+          {step === 1 && (
+            <div>
+              <div className="text-center mb-7">
+                <h1 className="text-2xl font-semibold tracking-tight mb-1.5">What kind of work do you do?</h1>
+                <p className="text-[var(--muted)] text-sm">We tune the diagnostic to how your business actually makes money.</p>
+              </div>
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mb-7">
+                {businessTypes.map((type) => {
+                  const active = businessType === type.id;
+                  return (
+                    <button
+                      key={type.id}
+                      onClick={() => setBusinessType(type.id)}
+                      className="p-4 rounded-2xl text-left transition-all duration-200"
+                      style={active
+                        ? { background: "rgba(10,132,255,0.08)", border: "1px solid var(--accent)", boxShadow: "0 6px 18px rgba(10,132,255,0.12)" }
+                        : { background: "rgba(255,255,255,0.5)", border: "1px solid rgba(0,0,0,0.07)" }}
+                    >
+                      <div className="text-2xl mb-2">{type.icon}</div>
+                      <h3 className="font-semibold text-sm tracking-tight">{type.label}</h3>
+                    </button>
+                  );
+                })}
+              </div>
+              <button onClick={() => setStep(2)} disabled={!businessType} className="btn-primary">Continue</button>
+            </div>
+          )}
+
+          {/* STEP 2 — size */}
+          {step === 2 && (
+            <div>
+              <div className="text-center mb-7">
+                <h1 className="text-2xl font-semibold tracking-tight mb-1.5">How big is your business?</h1>
+                <p className="text-[var(--muted)] text-sm">Just so we scope the numbers to your world.</p>
+              </div>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-7">
+                {teamSizes.map((size) => {
+                  const active = teamSize === size.id;
+                  return (
+                    <button
+                      key={size.id}
+                      onClick={() => setTeamSize(size.id)}
+                      className="p-4 rounded-2xl text-center transition-all duration-200"
+                      style={active
+                        ? { background: "rgba(10,132,255,0.08)", border: "1px solid var(--accent)", boxShadow: "0 6px 18px rgba(10,132,255,0.12)" }
+                        : { background: "rgba(255,255,255,0.5)", border: "1px solid rgba(0,0,0,0.07)" }}
+                    >
+                      <p className="font-semibold text-sm">{size.label}</p>
+                      <p className="text-[var(--muted)] text-xs mt-0.5">{size.desc}</p>
+                    </button>
+                  );
+                })}
+              </div>
+              <div className="flex items-center gap-3">
+                <button onClick={() => setStep(1)} className="btn-ghost flex-1">Back</button>
+                <button onClick={() => setStep(3)} disabled={!teamSize} className="btn-primary flex-1">Continue</button>
+              </div>
+            </div>
+          )}
+
+          {/* STEP 3 — leak */}
+          {step === 3 && (
+            <div>
+              <div className="text-center mb-7">
+                <h1 className="text-2xl font-semibold tracking-tight mb-1.5">Where does money slip out most?</h1>
+                <p className="text-[var(--muted)] text-sm">Pick the one that stings — we'll prioritize the agent that plugs it.</p>
+              </div>
+              <div className="grid gap-2.5 mb-6">
+                {challenges.map((c) => {
+                  const active = mainChallenge === c.id;
+                  return (
+                    <button
+                      key={c.id}
+                      onClick={() => setMainChallenge(c.id)}
+                      className="flex items-center gap-3 p-3.5 rounded-2xl text-left transition-all duration-200"
+                      style={active
+                        ? { background: "rgba(10,132,255,0.08)", border: "1px solid var(--accent)", boxShadow: "0 6px 18px rgba(10,132,255,0.12)" }
+                        : { background: "rgba(255,255,255,0.5)", border: "1px solid rgba(0,0,0,0.07)" }}
+                    >
+                      <span className="text-xl flex-shrink-0">{c.icon}</span>
+                      <span className="text-sm font-medium flex-1">{c.label}</span>
+                      {c.agent !== "Diagnostic" && (
+                        <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full hidden sm:block" style={{ color: "var(--accent)", background: "rgba(10,132,255,0.1)", border: "1px solid rgba(10,132,255,0.18)" }}>
+                          {c.agent}
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+
+              {error && (
+                <div className="rounded-xl px-4 py-3 mb-4" style={{ background: "rgba(229,72,77,0.08)", border: "1px solid rgba(229,72,77,0.2)" }}>
+                  <p className="text-sm" style={{ color: "#c93b40" }}>{error}</p>
+                </div>
+              )}
+
+              <div className="flex items-center gap-3">
+                <button onClick={() => setStep(2)} className="btn-ghost flex-1">Back</button>
+                <button onClick={handleFinish} disabled={loading || !mainChallenge} className="btn-primary flex-1">
+                  {loading ? (
+                    <>
+                      <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
+                      </svg>
+                      Setting up...
+                    </>
+                  ) : "Find my leaks"}
                 </button>
-              ))}
-            </div>
-            <button
-              onClick={() => setStep(2)}
-              disabled={!role}
-              className="w-full bg-blue-600 hover:bg-blue-500 disabled:opacity-40 text-white font-semibold px-6 py-3.5 rounded-xl text-sm transition shadow-lg shadow-blue-500/20"
-            >
-              Continue
-            </button>
-          </div>
-        )}
-
-        {step === 2 && (
-          <div>
-            <div className="text-center mb-8">
-              <div className="text-4xl mb-3">🏢</div>
-              <h1 className="text-2xl font-bold text-white mb-2">What industry are you in?</h1>
-              <p className="text-gray-400 text-sm">We will tailor your AI insights to your specific market.</p>
-            </div>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
-              {businessTypes.map((type) => (
-                <button
-                  key={type.id}
-                  onClick={() => setBusinessType(type.id)}
-                  className={
-                    "p-4 rounded-2xl border text-left transition-all duration-200 hover:-translate-y-0.5 " +
-                    (businessType === type.id
-                      ? "bg-blue-600/10 border-blue-500 shadow-lg shadow-blue-500/10"
-                      : "bg-gray-800/50 border-gray-700 hover:border-gray-600")
-                  }
-                >
-                  <div className="text-2xl mb-2">{type.icon}</div>
-                  <h3 className="text-white font-bold text-xs mb-1">{type.label}</h3>
-                  <p className={"text-xs leading-relaxed " + (businessType === type.id ? "text-blue-200/70" : "text-gray-600")}>
-                    {type.desc}
-                  </p>
-                </button>
-              ))}
-            </div>
-            {role === "manager" && (
-              <div className="mb-6">
-                <label className="block text-xs font-medium text-gray-400 mb-1.5">Team name</label>
-                <input
-                  type="text"
-                  value={teamName}
-                  onChange={(e) => setTeamName(e.target.value)}
-                  placeholder="e.g. Austin Solar Team"
-                  className="w-full bg-gray-800 border border-gray-700 text-white placeholder-gray-500 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
-                />
-              </div>
-            )}
-            <div className="flex items-center gap-3">
-              <button
-                onClick={() => setStep(1)}
-                className="flex-1 bg-gray-800 hover:bg-gray-700 border border-gray-700 text-white font-semibold px-6 py-3.5 rounded-xl text-sm transition"
-              >
-                Back
-              </button>
-              <button
-                onClick={() => setStep(3)}
-                disabled={!businessType}
-                className="flex-1 bg-blue-600 hover:bg-blue-500 disabled:opacity-40 text-white font-semibold px-6 py-3.5 rounded-xl text-sm transition shadow-lg shadow-blue-500/20"
-              >
-                Continue
-              </button>
-            </div>
-          </div>
-        )}
-
-        {step === 3 && (
-          <div>
-            <div className="text-center mb-6">
-              <div className="text-4xl mb-3">🎯</div>
-              <h1 className="text-2xl font-bold text-white mb-2">What is your biggest challenge?</h1>
-              <p className="text-gray-400 text-sm">We will prioritize insights that solve your specific problem.</p>
-            </div>
-            <div className="mb-6">
-              <p className="text-xs font-medium text-gray-400 mb-3">Team size</p>
-              <div className="grid grid-cols-4 gap-3">
-                {teamSizes.map((size) => (
-                  <button
-                    key={size.id}
-                    onClick={() => setTeamSize(size.id)}
-                    className={
-                      "p-3 rounded-xl border text-center transition-all " +
-                      (teamSize === size.id
-                        ? "bg-blue-600/10 border-blue-500"
-                        : "bg-gray-800/50 border-gray-700 hover:border-gray-600")
-                    }
-                  >
-                    <div className="text-xl mb-1">{size.icon}</div>
-                    <p className="text-white text-xs font-semibold">{size.label}</p>
-                    <p className={"text-xs " + (teamSize === size.id ? "text-blue-200/70" : "text-gray-600")}>{size.desc}</p>
-                  </button>
-                ))}
               </div>
             </div>
-            <div className="mb-8">
-              <p className="text-xs font-medium text-gray-400 mb-3">Main challenge</p>
-              <div className="grid grid-cols-2 gap-3">
-                {challenges.map((challenge) => (
-                  <button
-                    key={challenge.id}
-                    onClick={() => setMainChallenge(challenge.id)}
-                    className={
-                      "flex items-center gap-3 p-3 rounded-xl border text-left transition-all " +
-                      (mainChallenge === challenge.id
-                        ? "bg-blue-600/10 border-blue-500"
-                        : "bg-gray-800/50 border-gray-700 hover:border-gray-600")
-                    }
-                  >
-                    <span className="text-xl">{challenge.icon}</span>
-                    <div>
-                      <p className="text-white text-xs font-semibold">{challenge.label}</p>
-                      <p className={"text-xs " + (mainChallenge === challenge.id ? "text-blue-200/70" : "text-gray-600")}>
-                        {challenge.desc}
-                      </p>
-                    </div>
-                  </button>
-                ))}
-              </div>
-            </div>
-            <div className="flex items-center gap-3">
-              <button
-                onClick={() => setStep(2)}
-                className="flex-1 bg-gray-800 hover:bg-gray-700 border border-gray-700 text-white font-semibold px-6 py-3.5 rounded-xl text-sm transition"
-              >
-                Back
-              </button>
-              <button
-                onClick={() => setStep(4)}
-                disabled={!teamSize || !mainChallenge}
-                className="flex-1 bg-blue-600 hover:bg-blue-500 disabled:opacity-40 text-white font-semibold px-6 py-3.5 rounded-xl text-sm transition shadow-lg shadow-blue-500/20"
-              >
-                Continue
-              </button>
-            </div>
-          </div>
-        )}
+          )}
+        </div>
 
-        {step === 4 && (
-          <div>
-            <div className="text-center mb-8">
-              <div className="text-5xl mb-3">🚀</div>
-              <h1 className="text-2xl font-bold text-white mb-2">You are all set!</h1>
-              <p className="text-gray-400 text-sm leading-relaxed">
-                Your AI insights will be tailored to{" "}
-                <span className="text-white font-semibold">
-                  {businessTypes.find((b) => b.id === businessType)?.label}
-                </span>{" "}
-                sales with a focus on{" "}
-                <span className="text-white font-semibold">
-                  {challenges.find((c) => c.id === mainChallenge)?.label.toLowerCase()}
-                </span>
-                .
-              </p>
-            </div>
-
-            <div className="bg-gray-800/50 border border-gray-700 rounded-2xl p-5 mb-8">
-              <h3 className="text-white font-semibold text-sm mb-3">Your personalized setup</h3>
-              <div className="space-y-2">
-                {[
-                  { label: "Role", value: role === "manager" ? "Manager" : "Solo Rep", icon: role === "manager" ? "👔" : "🎯" },
-                  { label: "Industry", value: businessTypes.find((b) => b.id === businessType)?.label || "", icon: businessTypes.find((b) => b.id === businessType)?.icon || "📦" },
-                  { label: "Team size", value: teamSizes.find((t) => t.id === teamSize)?.label || "", icon: teamSizes.find((t) => t.id === teamSize)?.icon || "👤" },
-                  { label: "Focus area", value: challenges.find((c) => c.id === mainChallenge)?.label || "", icon: challenges.find((c) => c.id === mainChallenge)?.icon || "🎯" },
-                ].map((item) => (
-                  <div key={item.label} className="flex items-center justify-between">
-                    <span className="text-gray-500 text-xs">{item.label}</span>
-                    <span className="text-white text-xs font-medium flex items-center gap-1.5">
-                      {item.icon} {item.value}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {error && (
-              <div className="bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3 mb-4">
-                <p className="text-red-400 text-sm">{error}</p>
-              </div>
-            )}
-
-            <div className="flex items-center gap-3">
-              <button
-                onClick={() => setStep(3)}
-                className="bg-gray-800 hover:bg-gray-700 border border-gray-700 text-white font-semibold px-4 py-3.5 rounded-xl text-sm transition"
-              >
-                Back
-              </button>
-              <button
-                onClick={handleFinish}
-                disabled={loading}
-                className="flex-1 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white font-semibold px-6 py-3.5 rounded-xl text-sm transition shadow-lg shadow-blue-500/20 flex items-center justify-center gap-2"
-              >
-                {loading ? (
-                  <>
-                    <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
-                    </svg>
-                    Setting up...
-                  </>
-                ) : (
-                  "Go to dashboard"
-                )}
-              </button>
-            </div>
-          </div>
-        )}
+        <p className="text-center text-[var(--muted)] text-xs mt-6">Free analysis · No credit card · See the leaks before you decide</p>
       </div>
-
-      <p className="text-gray-700 text-xs mt-6">No credit card required. Cancel anytime.</p>
     </div>
   );
 }
