@@ -17,7 +17,7 @@ import Link from "next/link";
 
 /* ----------------------------- CONFIG ------------------------------ */
 const BRAND = "Adunda";
-const CALENDLY_URL = "https://calendly.com/andrewwhitesides7/30min"; // ← your real Calendly link
+const CALENDLY_URL = "https://calendly.com/andrewwhitesides7/free-diagnostic"; // ← your real Calendly link
 const CONTACT_EMAIL = "andrewwhitesides7@gmail.com"; // ← your real inbox
 const AGENT_PRICE = 250;
 const BUNDLE_PRICE = 1000;
