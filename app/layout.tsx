@@ -1,8 +1,7 @@
 import type { Metadata } from "next";
 import localFont from "next/font/local";
-// Change from: import "./globals.css";
-// Change to:
 import "@/app/globals.css";
+import { Analytics } from "@vercel/analytics/react";
 
 const geistSans = localFont({
   src: "./fonts/GeistVF.woff",
@@ -17,8 +16,9 @@ const geistMono = localFont({
 });
 
 export const metadata: Metadata = {
-  title: "Adunda — AI Sales Intelligence for Field Sales Teams",
-  description: "Adunda analyzes your field sales data and surfaces exactly where you are losing deals. Upload a CSV and get 8-10 actionable insights in under 2 minutes.",
+  title: "Adunda — Find the Money Your Business Is Leaking",
+  description:
+    "Adunda runs a free diagnostic on your real numbers, shows exactly where revenue slips out, then deploys AI agents to recover it. $250 per agent, or $1,000 for all of them.",
 };
 
 export default function RootLayout({
@@ -30,6 +30,7 @@ export default function RootLayout({
     <html lang="en">
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
         {children}
+        <Analytics />
       </body>
     </html>
   );

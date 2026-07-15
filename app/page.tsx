@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import Link from "next/link";
+import { track } from "@vercel/analytics";
 
 /* ------------------------------------------------------------------ *
  * Adunda — landing page  (app/page.tsx)
@@ -17,8 +18,8 @@ import Link from "next/link";
 
 /* ----------------------------- CONFIG ------------------------------ */
 const BRAND = "Adunda";
-const CALENDLY_URL = "https://calendly.com/andrewwhitesides7/free-diagnostic"; // ← your real Calendly link
-const CONTACT_EMAIL = "andrewwhitesides7@gmail.com"; // ← your real inbox
+const CALENDLY_URL = "https://calendly.com/your-handle/adunda-demo"; // ← your real Calendly link
+const CONTACT_EMAIL = "hello@adunda.com"; // ← your real inbox
 const AGENT_PRICE = 250;
 const BUNDLE_PRICE = 1000;
 /* ------------------------------------------------------------------- */
@@ -317,6 +318,19 @@ function LeakCalculator({ onBook }: { onBook: () => void }) {
   const [leads, setLeads] = useState(60); // new leads or inquiries / month
   const [value, setValue] = useState(900); // average sale value
   const [close, setClose] = useState(35); // close rate %
+  const touched = useRef(false);
+
+  // fires "calculator_used" once per visit, on first slider interaction
+  const withTracking = useCallback(
+    (setter: (v: number) => void) => (v: number) => {
+      if (!touched.current) {
+        touched.current = true;
+        track("calculator_used");
+      }
+      setter(v);
+    },
+    []
+  );
 
   // Conservative model: ~27% of inquiries never get a timely reply (industry
   // missed-call/slow-response data), and roughly half of those are winnable
@@ -342,7 +356,7 @@ function LeakCalculator({ onBook }: { onBook: () => void }) {
             min={10}
             max={400}
             step={5}
-            onChange={setLeads}
+            onChange={withTracking(setLeads)}
             format={(v) => String(v)}
           />
           <Slider
@@ -351,7 +365,7 @@ function LeakCalculator({ onBook }: { onBook: () => void }) {
             min={50}
             max={10000}
             step={50}
-            onChange={setValue}
+            onChange={withTracking(setValue)}
             format={(v) => fmt(v)}
           />
           <Slider
@@ -360,7 +374,7 @@ function LeakCalculator({ onBook }: { onBook: () => void }) {
             min={5}
             max={80}
             step={5}
-            onChange={setClose}
+            onChange={withTracking(setClose)}
             format={(v) => `${v}%`}
           />
           <p className="text-xs text-[var(--muted)] leading-relaxed">
@@ -416,10 +430,19 @@ function AgentPicker({ onBook }: { onBook: () => void }) {
   const animatedTotal = useCountUp(total, 400);
 
   const toggle = useCallback((id: string) => {
-    setSelected((s) => ({ ...s, [id]: !s[id] }));
+    setSelected((s) => {
+      const next = { ...s, [id]: !s[id] };
+      track("agent_toggled", {
+        agent: id,
+        on: next[id],
+        count: Object.values(next).filter(Boolean).length,
+      });
+      return next;
+    });
   }, []);
 
   const selectAll = useCallback(() => {
+    track("select_all_clicked");
     setSelected(Object.fromEntries(AGENTS.map((a) => [a.id, true])));
   }, []);
 
@@ -671,7 +694,8 @@ export default function Landing() {
     document.body.appendChild(s);
   }, []);
 
-  const openDemo = () => {
+  const openDemo = (location: string) => {
+    track("cta_clicked", { location });
     const w = window as unknown as { Calendly?: { initPopupWidget: (o: { url: string }) => void } };
     if (w.Calendly) w.Calendly.initPopupWidget({ url: CALENDLY_URL });
     else window.open(CALENDLY_URL, "_blank");
@@ -1044,7 +1068,7 @@ export default function Landing() {
             </div>
             <div className="flex items-center gap-1 sm:gap-3">
               <Link href="/login" className="text-sm font-medium text-[var(--muted)] hover:text-[var(--ink)] transition px-2.5 py-2">Log in</Link>
-              <button onClick={openDemo} className="btn-primary !py-2 !px-3.5 sm:!px-4 !text-sm whitespace-nowrap">Free diagnostic</button>
+              <button onClick={() => openDemo("nav")} className="btn-primary !py-2 !px-3.5 sm:!px-4 !text-sm whitespace-nowrap">Free diagnostic</button>
             </div>
           </div>
         </nav>
@@ -1077,8 +1101,8 @@ export default function Landing() {
 
             <Reveal delay={280}>
               <div className="mt-9 flex flex-col sm:flex-row gap-3 justify-center">
-                <button onClick={openDemo} className="btn-primary justify-center">Get my free diagnostic</button>
-                <button onClick={() => scrollTo("calculator")} className="btn-ghost justify-center">Estimate my leak</button>
+                <button onClick={() => openDemo("hero")} className="btn-primary justify-center">Get my free diagnostic</button>
+                <button onClick={() => { track("estimate_leak_clicked"); scrollTo("calculator"); }} className="btn-ghost justify-center">Estimate my leak</button>
               </div>
               <p className="mt-5 text-xs font-medium text-[var(--muted)]">
                 Built for small business owners · Diagnostic is free · Agents live in days, not quarters
@@ -1102,7 +1126,7 @@ export default function Landing() {
               One continuous line, four steps. Follow it down.
             </p>
           </Reveal>
-          <Journey onBook={openDemo} />
+          <Journey onBook={() => openDemo("journey")} />
         </section>
 
         {/* ---------------------------------------------- WHAT IT FINDS */}
@@ -1147,7 +1171,7 @@ export default function Landing() {
               </p>
             </Reveal>
             <Reveal>
-              <LeakCalculator onBook={openDemo} />
+              <LeakCalculator onBook={() => openDemo("calculator")} />
             </Reveal>
           </div>
         </section>
@@ -1165,7 +1189,7 @@ export default function Landing() {
                 leaks you recognize — the price updates as you go.
               </p>
             </Reveal>
-            <AgentPicker onBook={openDemo} />
+            <AgentPicker onBook={() => openDemo("pricing")} />
           </div>
         </section>
 
@@ -1184,7 +1208,7 @@ export default function Landing() {
                   dollars, before you spend one. Then you decide which agents to turn on. Only pay for
                   leaks that actually exist.
                 </p>
-                <button onClick={openDemo} className="btn-primary justify-center w-full mt-9 max-w-md mx-auto">
+                <button onClick={() => openDemo("free_diagnostic")} className="btn-primary justify-center w-full mt-9 max-w-md mx-auto">
                   Get my free diagnostic
                 </button>
                 <p className="mt-4 text-xs text-[var(--muted)]">
@@ -1206,7 +1230,7 @@ export default function Landing() {
               <p className="mt-4 text-[var(--muted)] text-lg max-w-xl mx-auto">
                 Bring your data. We'll find the leaks live and show you the agents that plug them.
               </p>
-              <button onClick={openDemo} className="btn-primary justify-center mt-8">
+              <button onClick={() => openDemo("final")} className="btn-primary justify-center mt-8">
                 Get my free diagnostic
               </button>
             </div>
