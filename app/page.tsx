@@ -18,7 +18,7 @@ import { track } from "@vercel/analytics";
 
 /* ----------------------------- CONFIG ------------------------------ */
 const BRAND = "Adunda";
-const CALENDLY_URL = "https://calendly.com/your-handle/adunda-demo"; // ← your real Calendly link
+const CALENDLY_URL = "https://calendly.com/andrewwhitesides7/free-diagnostic"; // ← your real Calendly link
 const CONTACT_EMAIL = "hello@adunda.com"; // ← your real inbox
 const AGENT_PRICE = 250;
 const BUNDLE_PRICE = 1000;
